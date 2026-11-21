@@ -219,6 +219,7 @@ export function CitySection() {
   }, [districts])
 
   const totalFiles = Object.values(districts).reduce((sum, district) => sum + district.totalFiles, 0)
+  void totalFiles
   const stage = stageRef.current
   const canvasLayer = canvasRef.current
   let layerX = 0

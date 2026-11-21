@@ -39,7 +39,6 @@ const MAX_FOOTPRINT = 0.95
 
 // Road system constants
 export const ROAD_WIDTH = 0.28
-const MIN_DISTRICT_GAP = 0.8
 
 export interface RoadNode {
   x: number
@@ -101,13 +100,6 @@ function buildRoadNetwork(plots: Plot[], bounds: Rect): RoadNetwork {
   // Create intersection nodes at district corners and along roads
   // Use a grid-based approach for efficient road layout
 
-  const districtCenters: { x: number; z: number; rect: Rect; repo: RepoSummary }[] = plots.map((p) => ({
-    x: p.rect.x,
-    z: p.rect.z,
-    rect: p.rect,
-    repo: p.repo,
-  }))
-
   // Create a main road grid based on district positions
   const mainRoadsX = new Set<number>()
   const mainRoadsZ = new Set<number>()
@@ -116,7 +108,7 @@ function buildRoadNetwork(plots: Plot[], bounds: Rect): RoadNetwork {
   for (const plot of plots) {
     const r = plot.rect
     // Road goes around the district
-    const roadInset = ROAD_WIDTH / 2 + 0.1
+    const roadInset = 0.24
     mainRoadsX.add(r.x - roadInset)
     mainRoadsX.add(r.x + r.w + roadInset)
     mainRoadsZ.add(r.z - roadInset)

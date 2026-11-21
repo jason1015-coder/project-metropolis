@@ -7,6 +7,7 @@ import * as THREE from 'three'
 
 import {
   layoutCity,
+  layoutBuildings,
   type Building,
   type Plot,
   type RoadNetwork,
@@ -25,7 +26,6 @@ import {
   makeDistrictLabel,
   makeGlowTexture,
   makePlaque,
-  makeRoadTexture,
   makeSandTexture,
   makeWoodTexture,
 } from './textures'
