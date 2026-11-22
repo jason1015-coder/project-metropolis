@@ -7,7 +7,7 @@ Every repository is a district in one continuous city and every text file in it 
 ## Features
 
 - **One continuous model**: a single paved ground, one road grid and one instanced mesh holding every building in the city
-- **Glowing district boundaries**: each repository owns a floating, breathing outline in its own light colour
+- **Glowing district boundaries**: the city is unmarked until you hover a building, then its repository's floating outline and name light up in that district's colour
 - **File links on hover**: a hovered building names its neighbours — same file name elsewhere, other files of the same type, and the rest of its own district — each one a link to the file on GitHub
 - **Surveyed in CI**: repositories are surveyed by a GitHub Action, not by each visitor's browser
 - **Performance optimized**: instanced rendering for buildings and roads

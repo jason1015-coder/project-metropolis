@@ -111,6 +111,8 @@ interface DistrictNode {
   edgeMaterial: THREE.MeshBasicMaterial
   /** Height the boundary hovers at: just above the district's own rooftops. */
   boundaryBase: number
+  /** 0..1 fade, so a district is only marked while one of its files is hovered. */
+  glow: number
   pick: THREE.Mesh
   accent: string
   phase: number
@@ -426,6 +428,8 @@ export class CityScene {
     // plinth the buildings stand on.
     const boundary = new THREE.Group()
     boundary.position.set(rect.x, BOUNDARY_Y, rect.z)
+    // Unmarked until the cursor lands on one of this district's buildings.
+    boundary.visible = false
 
     const boundaryMaterial = new THREE.MeshBasicMaterial({
       color: accent,
@@ -483,6 +487,7 @@ export class CityScene {
       boundaryMaterial,
       edgeMaterial,
       boundaryBase: BOUNDARY_Y,
+      glow: 0,
       pick,
       accent,
       phase: index * 0.7,
@@ -1022,14 +1027,24 @@ export class CityScene {
       this.renderer.shadowMap.needsUpdate = true
     }
 
-    // The district boundaries breathe and drift, and the hovered district lights up.
+    // A district stays unmarked until the cursor lands on one of its buildings:
+    // then its boundary, and the name riding it, fade in.
     for (const node of this.nodes.values()) {
+      const wanted = node === this.hovered && this.hoveredFile ? 1 : 0
+      node.glow += (wanted - node.glow) * Math.min(1, delta * 9)
+
+      if (node.glow < 0.02) {
+        node.glow = wanted === 0 ? 0 : node.glow
+        node.boundary.visible = false
+        continue
+      }
+
+      node.boundary.visible = true
       const pulse = this.reducedMotion ? 0.5 : Math.sin(elapsed * 1.15 + node.phase) * 0.5 + 0.5
-      const active = node === this.hovered
-      node.boundaryMaterial.opacity = (active ? 0.5 : 0.2) + pulse * 0.12
-      node.edgeMaterial.opacity = (active ? 0.95 : 0.55) + pulse * 0.18
+      node.boundaryMaterial.opacity = node.glow * (0.6 + pulse * 0.12)
+      node.edgeMaterial.opacity = node.glow * (0.95 + pulse * 0.05)
       node.boundary.position.y =
-        node.boundaryBase + (this.reducedMotion ? 0 : Math.sin(elapsed * 0.7 + node.phase) * 0.07)
+        node.boundaryBase + (this.reducedMotion ? 0 : Math.sin(elapsed * 0.7 + node.phase) * 0.04)
     }
 
     this.pet.update(elapsed, this.camera)
