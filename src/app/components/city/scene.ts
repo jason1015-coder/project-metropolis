@@ -107,6 +107,8 @@ interface DistrictNode {
   edgeMaterial: THREE.MeshBasicMaterial
   /** Height the boundary hovers at: just above the district's own rooftops. */
   boundaryBase: number
+  /** Path of the district's tallest file, lit yellow as its landmark tower. */
+  landmark: string | null
   pick: THREE.Mesh
   accent: string
   phase: number
@@ -149,9 +151,9 @@ export class CityScene {
   private lastPointer = { x: 0, y: 0 }
   private lastInput = 0
   private yaw = 0.62
-  private pitch = 0.48
-  private distance = 38
-  private readonly target = new THREE.Vector3(0, 1.4, 0)
+  private pitch = 0.42
+  private distance = 30
+  private readonly target = new THREE.Vector3(0, 1.9, 0)
   private frame = 0
 
   constructor(container: HTMLElement, callbacks: CityCallbacks) {
@@ -166,7 +168,7 @@ export class CityScene {
     this.renderer.shadowMap.autoUpdate = false
     this.renderer.shadowMap.needsUpdate = true
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.05
+    this.renderer.toneMappingExposure = 1.16
     this.renderer.domElement.style.display = 'block'
     this.renderer.domElement.style.width = '100%'
     this.renderer.domElement.style.height = '100%'
@@ -181,7 +183,7 @@ export class CityScene {
     this.buildLights()
 
     const highlightGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1))
-    const highlightMaterial = new THREE.LineBasicMaterial({ color: '#f2ffb0', transparent: true, opacity: 0.95 })
+    const highlightMaterial = new THREE.LineBasicMaterial({ color: '#ffe94a', transparent: true, opacity: 0.95 })
     this.highlight = new THREE.LineSegments(highlightGeometry, highlightMaterial)
     this.highlight.visible = false
     this.scene.add(this.highlight)
@@ -262,7 +264,7 @@ export class CityScene {
     // The city stands straight on the page background: one ground plane, no tray.
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(240, 240),
-      new THREE.MeshStandardMaterial({ color: '#0e1413', roughness: 0.96, metalness: 0 }),
+      new THREE.MeshStandardMaterial({ color: '#171c21', roughness: 0.96, metalness: 0 }),
     )
     ground.rotation.x = -Math.PI / 2
     ground.position.y = GROUND_Y
@@ -273,7 +275,7 @@ export class CityScene {
     // not a tray of separate blocks.
     const paving = new THREE.Mesh(
       new THREE.PlaneGeometry(CITY_BOUNDS.w + ROAD_WIDTH, CITY_BOUNDS.d + ROAD_WIDTH),
-      new THREE.MeshStandardMaterial({ color: '#18211f', roughness: 0.94, metalness: 0.03 }),
+      new THREE.MeshStandardMaterial({ color: '#20262c', roughness: 0.94, metalness: 0.03 }),
     )
     paving.rotation.x = -Math.PI / 2
     paving.position.set(CITY_BOUNDS.x, GROUND_Y + 0.006, CITY_BOUNDS.z)
@@ -284,8 +286,9 @@ export class CityScene {
       new THREE.PlaneGeometry(CITY_BOUNDS.w * 1.9, CITY_BOUNDS.d * 2.1),
       new THREE.MeshBasicMaterial({
         map: makeGlowTexture(),
+        color: '#9fb6d6',
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.2,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       }),
@@ -309,29 +312,27 @@ export class CityScene {
   }
 
   private buildLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0xffe7c2, 0x101815, 0.95))
+    // Overcast city light: a cool sky, a white key and no warm cast, so the
+    // concrete reads as clay-grey rather than sepia.
+    this.scene.add(new THREE.HemisphereLight(0xeaf2ff, 0x39414a, 1.3))
 
-    const key = new THREE.DirectionalLight(0xfff0d2, 2.4)
-    key.position.set(16, 26, 18)
+    const key = new THREE.DirectionalLight(0xffffff, 2.3)
+    key.position.set(18, 32, 14)
     key.castShadow = true
     key.shadow.mapSize.set(2048, 2048)
-    key.shadow.camera.left = -24
-    key.shadow.camera.right = 24
-    key.shadow.camera.top = 24
-    key.shadow.camera.bottom = -24
+    key.shadow.camera.left = -27
+    key.shadow.camera.right = 27
+    key.shadow.camera.top = 27
+    key.shadow.camera.bottom = -27
     key.shadow.camera.near = 1
     key.shadow.camera.far = 90
     key.shadow.bias = -0.0004
     key.shadow.normalBias = 0.02
     this.scene.add(key)
 
-    const rim = new THREE.DirectionalLight(0x8fb6ff, 0.7)
+    const rim = new THREE.DirectionalLight(0xa8c8ff, 0.72)
     rim.position.set(-12, 8, -10)
     this.scene.add(rim)
-
-    const fill = new THREE.PointLight(0xffcf94, 40, 34, 2)
-    fill.position.set(0, 12, 6)
-    this.scene.add(fill)
   }
 
   private clearCity(): void {
@@ -362,7 +363,7 @@ export class CityScene {
   }
 
   private buildRoads(roadNetwork: RoadNetwork): void {
-    const roadMaterial = new THREE.MeshStandardMaterial({ color: '#2c3331', roughness: 0.94, metalness: 0.02 })
+    const roadMaterial = new THREE.MeshStandardMaterial({ color: '#39424d', roughness: 0.94, metalness: 0.02 })
     const roadGeometry = new THREE.PlaneGeometry(ROAD_WIDTH, 1)
     roadGeometry.rotateX(-Math.PI / 2)
 
@@ -452,14 +453,16 @@ export class CityScene {
     this.scene.add(pick)
 
     const labelTexture = makeDistrictLabel(repo.name, `${repo.language ?? 'repository'} · ${formatKb(repo.sizeKb)}`)
-    const labelWidth = Math.min(rect.w * 0.72, 3.6)
+    const labelWidth = Math.min(rect.w * 0.8, 3.2)
     const label = new THREE.Mesh(
       new THREE.PlaneGeometry(labelWidth, labelWidth * (176 / 1024)),
       new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true, depthWrite: false, toneMapped: false }),
     )
     label.rotation.x = -Math.PI / 2
-    label.position.set(rect.x, GROUND_Y + 0.042, rect.z + rect.d / 2 + ROAD_WIDTH / 2)
-    this.scene.add(label)
+    // The name rides with the glowing boundary, floating over the street that
+    // fronts the district, so the dense blocks never cover it.
+    label.position.set(0, 0.02, rect.d / 2 + 0.45)
+    boundary.add(label)
 
     const node: DistrictNode = {
       repo,
@@ -473,6 +476,7 @@ export class CityScene {
       boundaryMaterial,
       edgeMaterial,
       boundaryBase: BOUNDARY_Y,
+      landmark: null,
       pick,
       accent,
       phase: index * 0.7,
@@ -489,16 +493,22 @@ export class CityScene {
     node.files = data.files
     node.layout = layoutBuildings(data.files, node.plot.rect)
 
-    // Float the boundary clear of the tallest tower in this district, so the
-    // outline hovers over the city instead of being lost among the rooftops.
+    // Float the boundary clear of the tallest tower in this district, and light
+    // that tower yellow: one landmark per district, like the reference city.
     let rooftop = 0
-    for (const building of node.layout) rooftop = Math.max(rooftop, building.h)
+    node.landmark = null
+    for (const building of node.layout) {
+      if (building.h > rooftop) {
+        rooftop = building.h
+        node.landmark = building.file.path
+      }
+    }
     node.boundaryBase = Math.max(BOUNDARY_Y + 0.3, rooftop + 1.1)
     node.boundary.position.y = node.boundaryBase
 
     const labelTexture = makeDistrictLabel(
       node.repo.name,
-      `${data.files.length} buildings · ${data.lines.toLocaleString('en-GB')} lines`,
+      `${node.layout.length} buildings · ${data.lines.toLocaleString('en-GB')} lines`,
     )
     node.labelTexture.dispose()
     node.labelTexture = labelTexture
@@ -536,7 +546,7 @@ export class CityScene {
       scale.set(building.w, building.h, building.d)
       matrix.compose(position, quaternion, scale)
       mesh.setMatrixAt(index, matrix)
-      mesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade))
+      mesh.setColorAt(index, facadeColour(building, entry.node.landmark, colour))
     })
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
@@ -564,7 +574,7 @@ export class CityScene {
         scale.set(detail.w, detail.h, detail.d)
         matrix.compose(position, quaternion, scale)
         detailMesh.setMatrixAt(index, matrix)
-        detailMesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade + 0.06))
+        detailMesh.setColorAt(index, facadeColour(building, entry.node.landmark, colour, 0.06))
       })
       detailMesh.instanceMatrix.needsUpdate = true
       if (detailMesh.instanceColor) detailMesh.instanceColor.needsUpdate = true
@@ -714,8 +724,8 @@ export class CityScene {
 
   private resetCamera = () => {
     this.yaw = 0.62
-    this.pitch = 0.48
-    this.distance = 38
+    this.pitch = 0.42
+    this.distance = 34
   }
 
   private clearHover(): void {
@@ -847,7 +857,7 @@ export class CityScene {
       lines: data?.lines ?? 0,
       bytes: data?.bytes ?? 0,
       files: data?.totalFiles ?? 0,
-      shown: data?.files.length ?? 0,
+      shown: node.layout.length,
       stars: node.repo.stars,
       language: node.repo.language ?? undefined,
       url: node.repo.url,
@@ -915,8 +925,8 @@ export class CityScene {
     for (const node of this.nodes.values()) {
       const pulse = this.reducedMotion ? 0.5 : Math.sin(elapsed * 1.15 + node.phase) * 0.5 + 0.5
       const active = node === this.hovered
-      node.boundaryMaterial.opacity = (active ? 0.7 : 0.34) + pulse * 0.16
-      node.edgeMaterial.opacity = (active ? 1 : 0.82) + pulse * 0.18
+      node.boundaryMaterial.opacity = (active ? 0.5 : 0.2) + pulse * 0.12
+      node.edgeMaterial.opacity = (active ? 0.95 : 0.55) + pulse * 0.18
       node.boundary.position.y =
         node.boundaryBase + (this.reducedMotion ? 0 : Math.sin(elapsed * 0.7 + node.phase) * 0.07)
     }
@@ -1018,6 +1028,26 @@ function siblings(node: DistrictNode, file: CityFile): FileEntry[] {
     })
     .sort((a, b) => b.shared - a.shared || a.file.path.localeCompare(b.file.path))
     .map((entry) => ({ node, file: entry.file }))
+}
+
+const CONCRETE = new THREE.Color('#dde2e7')
+const LANDMARK = new THREE.Color('#e9e42f')
+const TINTS = new Map<string, THREE.Color>()
+
+/**
+ * Facades are pale concrete carrying a trace of the file's language, the way the
+ * reference city is clay-grey with a handful of yellow landmark towers.
+ */
+function facadeColour(building: Building, landmark: string | null, out: THREE.Color, lift = 0): THREE.Color {
+  const shade = building.shade + lift
+  if (landmark === building.file.path) return out.copy(LANDMARK).offsetHSL(0, 0, shade * 0.5)
+
+  let tint = TINTS.get(building.color)
+  if (!tint) {
+    tint = new THREE.Color(building.color)
+    TINTS.set(building.color, tint)
+  }
+  return out.copy(CONCRETE).lerp(tint, 0.2).offsetHSL(0, -0.03, shade * 1.5)
 }
 
 function formatKb(sizeKb: number): string {

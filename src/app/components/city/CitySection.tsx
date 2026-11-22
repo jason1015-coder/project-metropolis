@@ -141,7 +141,7 @@ export function CitySection() {
 
         <div className="mt-6 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <p className="max-w-2xl text-pretty text-[16.5px] leading-relaxed text-muted">
-            One continuous city: every repository is a district, every file a building, and the streets run between them.
+            One continuous city: every repository is a district, its biggest files become its buildings, and the streets run between them.
             Height is lines of code, footprint is file size, and a scheduled GitHub Action surveys every repository on the
             account to write {LAYOUT_FILE}. Districts are mapped by glowing floating boundaries, not by plinths. Drag to
             walk around, hold ⌘ or Ctrl and scroll to lean in, and hover a building to follow its links — the same file

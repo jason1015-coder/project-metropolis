@@ -48,14 +48,21 @@ export interface Building {
 export const CITY_BOUNDS: Rect = { x: 0, z: 0, w: 34, d: 23 }
 
 /** The width of the streets that run between the blocks. */
-export const ROAD_WIDTH = 1.35
+export const ROAD_WIDTH = 0.9
 
 /** Pavement between a building and the kerb: buildings front straight onto the streets. */
-const FRONTAGE = 0.14
+const FRONTAGE = 0.05
 /** Lines of code that reach full height. Bigger files are clamped, not scaled. */
-const TALLEST_LINES = 1600
-const MAX_HEIGHT = 4.4
-const MAX_FOOTPRINT = 1.6
+const TALLEST_LINES = 900
+/** Tall enough to read as a downtown canyon, low enough to keep roofs chunky. */
+const MAX_HEIGHT = 6.8
+const MAX_FOOTPRINT = 1.35
+/**
+ * A district keeps its biggest files as buildings. Without a ceiling the largest
+ * repositories would fill a block with needles a few pixels wide instead of the
+ * solid street wall a downtown block is made of.
+ */
+const MAX_BUILDINGS = 300
 
 export interface RoadNode {
   x: number
@@ -185,9 +192,10 @@ export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
   const area = shrink(district, FRONTAGE)
   if (area.w <= 0 || area.d <= 0) return []
 
+  const count = Math.min(files.length, MAX_BUILDINGS)
   const aspect = area.w / area.d
-  const cols = Math.max(1, Math.min(48, Math.round(Math.sqrt(files.length * aspect))))
-  const rows = Math.ceil(files.length / cols)
+  const cols = Math.max(1, Math.min(48, Math.round(Math.sqrt(count * aspect))))
+  const rows = Math.ceil(count / cols)
   const cellW = area.w / cols
   const cellD = area.d / rows
 
@@ -211,15 +219,17 @@ export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
     const plot = cells[index]
     // Style is hashed from the file path, so it survives reloads and deploys.
     const seed = hashPath(file.path)
-    const height = heightFor(file.lines) * (0.7 + unit(seed, 1) * 0.75)
+    // Most of the block is mid-rise and a handful of files break the skyline,
+    // the way a downtown does.
+    const height = Math.min(heightFor(file.lines) * (0.6 + unit(seed, 1) * 1.35), MAX_HEIGHT * 1.18)
 
-    // Towers keep more air around them than low-rise buildings, but every plot
-    // leaves an alley, so each file stays a building instead of merging into
-    // its neighbours.
+    // Blocks are packed tight, the way a real downtown is: every plot fills its
+    // cell down to a thin alley, and the tall towers keep only a little more air
+    // than the low-rise around them.
     const tall = height / (0.4 + MAX_HEIGHT)
-    const fill = 0.9 - 0.24 * tall * unit(seed, 2)
-    const w = clamp(cellW * fill * (0.84 + unit(seed, 3) * 0.16), 0.12, MAX_FOOTPRINT)
-    const d = clamp(cellD * fill * (0.84 + unit(seed, 4) * 0.16), 0.12, MAX_FOOTPRINT)
+    const fill = 0.97 - 0.08 * tall * unit(seed, 2)
+    const w = clamp(cellW * fill * (0.9 + unit(seed, 3) * 0.1), 0.1, MAX_FOOTPRINT)
+    const d = clamp(cellD * fill * (0.9 + unit(seed, 4) * 0.1), 0.1, MAX_FOOTPRINT)
 
     return {
       file,
@@ -301,7 +311,8 @@ function clamp(value: number, min: number, max: number): number {
 
 export function heightFor(lines: number): number {
   const normalised = Math.min(1, Math.log1p(Math.max(0, lines)) / Math.log1p(TALLEST_LINES))
-  return 0.4 + Math.pow(normalised, 2) * MAX_HEIGHT
+  // A steep curve keeps the average block mid-rise and lets the big files tower.
+  return 0.4 + Math.pow(normalised, 2.8) * MAX_HEIGHT
 }
 
 function shrink(rect: Rect, amount: number): Rect {
