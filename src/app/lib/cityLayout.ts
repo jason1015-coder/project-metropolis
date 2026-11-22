@@ -211,19 +211,20 @@ export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
     const plot = cells[index]
     // Style is hashed from the file path, so it survives reloads and deploys.
     const seed = hashPath(file.path)
-    const height = heightFor(file.lines) * (0.82 + unit(seed, 1) * 0.46)
+    const height = heightFor(file.lines) * (0.7 + unit(seed, 1) * 0.75)
 
-    // Towers keep a little air around them; low-rise buildings fill their plot
-    // so the streets read as an unbroken wall of facades.
+    // Towers keep more air around them than low-rise buildings, but every plot
+    // leaves an alley, so each file stays a building instead of merging into
+    // its neighbours.
     const tall = height / (0.4 + MAX_HEIGHT)
-    const fill = 0.95 - 0.34 * tall * unit(seed, 2)
-    const w = clamp(cellW * fill * (0.86 + unit(seed, 3) * 0.14), 0.14, MAX_FOOTPRINT)
-    const d = clamp(cellD * fill * (0.86 + unit(seed, 4) * 0.14), 0.14, MAX_FOOTPRINT)
+    const fill = 0.9 - 0.24 * tall * unit(seed, 2)
+    const w = clamp(cellW * fill * (0.84 + unit(seed, 3) * 0.16), 0.12, MAX_FOOTPRINT)
+    const d = clamp(cellD * fill * (0.84 + unit(seed, 4) * 0.16), 0.12, MAX_FOOTPRINT)
 
     return {
       file,
-      x: plot.x,
-      z: plot.z,
+      x: plot.x + (unit(seed, 12) - 0.5) * cellW * 0.06,
+      z: plot.z + (unit(seed, 13) - 0.5) * cellD * 0.06,
       w,
       d,
       h: height,
