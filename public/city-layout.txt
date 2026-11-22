@@ -9,7 +9,7 @@
 #     file <lines> <bytes> <path>  one building per text file
 
 owner jason1015-coder
-updated 2026-11-22T09:18:08Z
+updated 2026-11-22T09:59:01Z
 districts 11
 buildings 2332
 
@@ -1187,29 +1187,29 @@ district project-metropolis
   forks 0
   size 64
   branch main
-  pushed 2026-11-22T09:18:08Z
+  pushed 2026-11-22T09:59:01Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 23
-  lines 5853
+  lines 6126
   file 62 1936 .github/workflows/city-layout.yml
   file 63 1285 .github/workflows/deploy.yml
   file 7 60 .gitignore
   file 19 759 index.html
   file 1 647 package.json
-  file 2445 112535 public/city-layout.txt
+  file 2489 114151 public/city-layout.txt
   file 12 484 public/favicon.svg
-  file 54 2471 README.md
-  file 310 11089 scripts/survey-city.mjs
+  file 54 2594 README.md
+  file 323 11565 scripts/survey-city.mjs
   file 147 5825 src/app/App.tsx
-  file 369 17415 src/app/components/city/CitySection.tsx
-  file 1026 34301 src/app/components/city/scene.ts
+  file 369 17456 src/app/components/city/CitySection.tsx
+  file 1165 39423 src/app/components/city/scene.ts
   file 271 9209 src/app/components/city/tamagotchi.ts
   file 165 5338 src/app/components/city/textures.ts
   file 72 2777 src/app/components/motion.tsx
   file 49 1919 src/app/components/Preloader.tsx
-  file 285 8818 src/app/lib/cityData.ts
-  file 314 9618 src/app/lib/cityLayout.ts
+  file 295 9308 src/app/lib/cityData.ts
+  file 381 11905 src/app/lib/cityLayout.ts
   file 3 124 src/app/lib/cx.ts
   file 11 236 src/main.tsx
   file 152 3900 src/styles.css
