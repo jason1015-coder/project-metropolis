@@ -26,7 +26,6 @@ import { makeContactShadow, makeDistrictLabel, makeGlowTexture } from './texture
 const GROUND_Y = 0
 const BLOCK_H = 0.12
 const BUILDING_BASE = BLOCK_H
-const LABEL_BAND = 0.7
 const PET_POSITION = new THREE.Vector3(-8, GROUND_Y, CITY_BOUNDS.d / 2 + 2.4)
 
 const BLOCK_COLOURS = ['#202a27', '#232d29', '#1e2724', '#262f2b', '#212a27', '#28322e']
@@ -209,13 +208,9 @@ export class CityScene {
     labelMaterial.map = labelTexture
     labelMaterial.needsUpdate = true
 
-    const inner = {
-      x: node.plot.rect.x,
-      z: node.plot.rect.z - LABEL_BAND / 2,
-      w: node.plot.rect.w,
-      d: node.plot.rect.d - LABEL_BAND,
-    }
-    node.layout = layoutBuildings(data.files, inner)
+    // The label lives on the street outside the block, so no frontage is set
+    // back to make room for it: all four sides meet their roads the same way.
+    node.layout = layoutBuildings(data.files, node.plot.rect)
 
     this.clearBuildings(node)
 
@@ -468,7 +463,7 @@ export class CityScene {
       new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true, depthWrite: false, toneMapped: false }),
     )
     label.rotation.x = -Math.PI / 2
-    label.position.set(rect.x, BUILDING_BASE + 0.01, rect.z + rect.d / 2 - LABEL_BAND / 2)
+    label.position.set(rect.x, GROUND_Y + 0.038, rect.z + rect.d / 2 + ROAD_WIDTH / 2)
     this.scene.add(label)
 
     const buildings = new THREE.Group()
