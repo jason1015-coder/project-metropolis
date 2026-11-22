@@ -111,8 +111,6 @@ interface DistrictNode {
   edgeMaterial: THREE.MeshBasicMaterial
   /** Height the boundary hovers at: just above the district's own rooftops. */
   boundaryBase: number
-  /** Path of the district's tallest file, lit yellow as its landmark tower. */
-  landmark: string | null
   pick: THREE.Mesh
   accent: string
   phase: number
@@ -484,7 +482,6 @@ export class CityScene {
       boundaryMaterial,
       edgeMaterial,
       boundaryBase: BOUNDARY_Y,
-      landmark: null,
       pick,
       accent,
       phase: index * 0.7,
@@ -502,16 +499,10 @@ export class CityScene {
     node.layout = layoutBuildings(data.files, node.plot.rect)
     node.lanes = layoutLanes(data.files, node.plot.rect)
 
-    // Float the boundary clear of the tallest tower in this district, and light
-    // that tower yellow: one landmark per district, like the reference city.
+    // Float the boundary clear of the tallest tower in this district, so the
+    // outline hovers over the city instead of being lost among the rooftops.
     let rooftop = 0
-    node.landmark = null
-    for (const building of node.layout) {
-      if (building.h > rooftop) {
-        rooftop = building.h
-        node.landmark = building.file.path
-      }
-    }
+    for (const building of node.layout) rooftop = Math.max(rooftop, building.h)
     node.boundaryBase = Math.max(BOUNDARY_Y + 0.3, rooftop + 1.1)
     node.boundary.position.y = node.boundaryBase
 
@@ -555,7 +546,7 @@ export class CityScene {
       scale.set(building.w, building.h, building.d)
       matrix.compose(position, quaternion, scale)
       mesh.setMatrixAt(index, matrix)
-      mesh.setColorAt(index, facadeColour(building, entry.node.landmark, colour))
+      mesh.setColorAt(index, facadeColour(building, colour))
     })
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
@@ -583,7 +574,7 @@ export class CityScene {
         scale.set(detail.w, detail.h, detail.d)
         matrix.compose(position, quaternion, scale)
         detailMesh.setMatrixAt(index, matrix)
-        detailMesh.setColorAt(index, facadeColour(building, entry.node.landmark, colour, 0.06))
+        detailMesh.setColorAt(index, facadeColour(building, colour, 0.06))
       })
       detailMesh.instanceMatrix.needsUpdate = true
       if (detailMesh.instanceColor) detailMesh.instanceColor.needsUpdate = true
@@ -1079,23 +1070,16 @@ function siblings(node: DistrictNode, file: CityFile): FileEntry[] {
 }
 
 const CONCRETE = new THREE.Color('#dde2e7')
-const LANDMARK = new THREE.Color('#e9e42f')
-const TINTS = new Map<string, THREE.Color>()
 
 /**
- * Facades are pale concrete carrying a trace of the file's language, the way the
- * reference city is clay-grey with a handful of yellow landmark towers.
+ * Every building wears its file's language, eased a little toward concrete so a
+ * full palette still reads as masonry under the city's hard light.
  */
-function facadeColour(building: Building, landmark: string | null, out: THREE.Color, lift = 0): THREE.Color {
-  const shade = building.shade + lift
-  if (landmark === building.file.path) return out.copy(LANDMARK).offsetHSL(0, 0, shade * 0.5)
-
-  let tint = TINTS.get(building.color)
-  if (!tint) {
-    tint = new THREE.Color(building.color)
-    TINTS.set(building.color, tint)
-  }
-  return out.copy(CONCRETE).lerp(tint, 0.2).offsetHSL(0, -0.03, shade * 1.5)
+function facadeColour(building: Building, out: THREE.Color, lift = 0): THREE.Color {
+  return out
+    .set(building.color)
+    .offsetHSL(0, 0.08, building.shade + lift)
+    .lerp(CONCRETE, 0.08)
 }
 
 function formatKb(sizeKb: number): string {
