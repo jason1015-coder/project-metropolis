@@ -185,31 +185,6 @@ export function CitySection() {
           </p>
         </div>
 
-        {/* Stats docked along the bottom edge, so the city itself stays clear. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-line/60 bg-bg/75 backdrop-blur-md">
-          <div className="mx-auto flex max-w-[1400px] flex-wrap items-end justify-between gap-x-8 gap-y-3 px-5 py-3.5 sm:px-8 sm:py-4">
-            <div className="min-w-[180px]">
-              <p className="mono text-[10px] uppercase tracking-[0.1em] text-faint">
-                {surveyed || '–'} districts · {fileCount ? fileCount.toLocaleString('en-GB') : '–'} files
-              </p>
-              <p className="mono mt-2 text-[10px] uppercase tracking-[0.1em] text-faint">
-                {layout ? `surveyed ${formatSurveyed(layout.updatedAt)}` : `waiting for ${LAYOUT_FILE}`}
-              </p>
-            </div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-right sm:grid-cols-4 sm:gap-x-8 lg:gap-x-10">
-              {statItems.map((item) => (
-                <div key={item.label}>
-                  <dt className="mono text-[10px] uppercase tracking-[0.14em] text-faint">{item.label}</dt>
-                  <dd className="font-display mt-1 text-[22px] leading-none tabular-nums sm:text-[24px]">{item.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-          <p className="mono mx-auto max-w-[1400px] px-5 pb-3 pt-2 text-[9.5px] uppercase tracking-[0.12em] text-faint/80 sm:px-8">
-            area = repo size · height = lines · glowing district boundaries
-          </p>
-        </div>
-
         {status === 'loading' && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
             <p className="mono animate-pulse text-[11px] uppercase tracking-[0.18em] text-accent">
@@ -347,6 +322,21 @@ export function CitySection() {
           </div>
         )}
       </div>
+
+      {/* Stats sit in the page under the city, not over it. */}
+      <dl className="mx-auto mt-6 grid max-w-[1400px] grid-cols-2 gap-x-8 gap-y-6 border-t border-line/70 px-5 pt-6 sm:grid-cols-4 sm:px-8">
+        {statItems.map((item) => (
+          <div key={item.label}>
+            <dt className="mono text-[10px] uppercase tracking-[0.14em] text-faint">{item.label}</dt>
+            <dd className="font-display mt-2 text-[clamp(28px,3.2vw,40px)] leading-none tabular-nums">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <p className="mono mx-auto mt-4 max-w-[1400px] px-5 text-[10px] uppercase leading-relaxed tracking-[0.1em] text-faint sm:px-8">
+        {surveyed || '–'} districts · {fileCount ? fileCount.toLocaleString('en-GB') : '–'} files ·{' '}
+        {layout ? `surveyed ${formatSurveyed(layout.updatedAt)}` : `waiting for ${LAYOUT_FILE}`} · area = repo size · height = lines
+      </p>
 
       <div className="mono mx-auto mt-4 flex max-w-[1400px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 text-[10px] uppercase tracking-[0.13em] text-faint sm:px-8">
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
