@@ -112,6 +112,13 @@ export function CitySection() {
       .map(([label, value]) => ({ label, ...value }))
   }, [districts])
 
+  const statItems = [
+    { label: 'districts', value: String(repos.length || '–') },
+    { label: 'buildings', value: stats.buildings ? stats.buildings.toLocaleString('en-GB') : '–' },
+    { label: 'lines', value: stats.lines ? compact(stats.lines) : '–' },
+    { label: 'roads', value: stats.roads ? String(stats.roads) : '–' },
+  ]
+
   const stage = stageRef.current
   const canvasLayer = canvasRef.current
   let layerX = 0
@@ -154,19 +161,6 @@ export function CitySection() {
             line map: imports in green, importers in pink, the same type in cyan, the same name in amber, and the rest of its
             district in violet, each one a link to the file on GitHub.
           </p>
-          <dl className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4 lg:gap-x-10">
-            {[
-              { label: 'districts', value: String(repos.length || '–') },
-              { label: 'buildings', value: stats.buildings ? stats.buildings.toLocaleString('en-GB') : '–' },
-              { label: 'lines', value: stats.lines ? compact(stats.lines) : '–' },
-              { label: 'roads', value: stats.roads ? String(stats.roads) : '–' },
-            ].map((item) => (
-              <div key={item.label}>
-                <dt className="mono text-[10px] uppercase tracking-[0.14em] text-faint">{item.label}</dt>
-                <dd className="font-display mt-1 text-[28px] leading-none tabular-nums">{item.value}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </div>
 
@@ -179,7 +173,7 @@ export function CitySection() {
         />
 
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-bg via-bg/40 to-transparent" />
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bg via-bg/50 to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bg via-bg/60 to-transparent" />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-[1400px] flex-wrap items-start justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5">
           <p className="mono flex items-center gap-2 text-[10.5px] uppercase tracking-[0.16em] text-faint">
@@ -191,19 +185,28 @@ export function CitySection() {
           </p>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto flex max-w-[1400px] flex-wrap items-end justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5">
-          <div className="min-w-[180px]">
-            <p className="mono text-[10px] uppercase tracking-[0.1em] text-faint">
-              {surveyed || '–'} districts · {fileCount ? fileCount.toLocaleString('en-GB') : '–'} files
-            </p>
-            <p className="mono mt-2 text-[10px] uppercase tracking-[0.1em] text-faint">
-              {layout ? `surveyed ${formatSurveyed(layout.updatedAt)}` : `waiting for ${LAYOUT_FILE}`}
-            </p>
+        {/* Stats docked along the bottom edge, so the city itself stays clear. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-line/60 bg-bg/75 backdrop-blur-md">
+          <div className="mx-auto flex max-w-[1400px] flex-wrap items-end justify-between gap-x-8 gap-y-3 px-5 py-3.5 sm:px-8 sm:py-4">
+            <div className="min-w-[180px]">
+              <p className="mono text-[10px] uppercase tracking-[0.1em] text-faint">
+                {surveyed || '–'} districts · {fileCount ? fileCount.toLocaleString('en-GB') : '–'} files
+              </p>
+              <p className="mono mt-2 text-[10px] uppercase tracking-[0.1em] text-faint">
+                {layout ? `surveyed ${formatSurveyed(layout.updatedAt)}` : `waiting for ${LAYOUT_FILE}`}
+              </p>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-right sm:grid-cols-4 sm:gap-x-8 lg:gap-x-10">
+              {statItems.map((item) => (
+                <div key={item.label}>
+                  <dt className="mono text-[10px] uppercase tracking-[0.14em] text-faint">{item.label}</dt>
+                  <dd className="font-display mt-1 text-[22px] leading-none tabular-nums sm:text-[24px]">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <p className="mono text-right text-[10px] uppercase leading-relaxed tracking-[0.12em] text-faint">
-            area = repo size · height = lines
-            <br />
-            one model · glowing district boundaries
+          <p className="mono mx-auto max-w-[1400px] px-5 pb-3 pt-2 text-[9.5px] uppercase tracking-[0.12em] text-faint/80 sm:px-8">
+            area = repo size · height = lines · glowing district boundaries
           </p>
         </div>
 
