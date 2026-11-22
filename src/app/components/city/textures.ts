@@ -128,11 +128,11 @@ export function makeDistrictLabel(name: string, detail: string): THREE.CanvasTex
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.fillStyle = 'rgba(38,28,16,0.78)'
+  ctx.fillStyle = 'rgba(233,242,237,0.88)'
   ctx.font = '600 54px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillText(name.toUpperCase(), 512, 62, 960)
 
-  ctx.fillStyle = 'rgba(54,40,22,0.6)'
+  ctx.fillStyle = 'rgba(178,194,187,0.62)'
   ctx.font = '400 34px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillText(detail, 512, 124, 960)
 

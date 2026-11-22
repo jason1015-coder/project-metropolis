@@ -40,9 +40,13 @@ function Pages() {
   )
 }
 
+// Matches the Vite base, so routing works when the site is served from a
+// subpath such as GitHub Pages' /project-metropolis/.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 export function App() {
   return (
-    <BrowserRouter basename="/">
+    <BrowserRouter basename={basename}>
       <Preloader />
       <ScrollManager />
       <Pages />
@@ -86,10 +90,10 @@ function Home() {
             className="mt-8 max-w-2xl"
           >
             <p className="font-display text-balance text-[26px] leading-[1.12] sm:text-[32px]">
-              A 3D sand table of your GitHub repositories.
+              One continuous 3D city, built from your GitHub repositories.
             </p>
             <p className="mt-4 text-pretty text-[16.5px] leading-relaxed text-muted sm:text-[17.5px]">
-              Every repository becomes a district connected by roads, every text file a building.
+              Every repository is a district in the city, every text file a building, and roads run between the blocks.
               Height is lines of code, footprint is file size, read live from GitHub.
               Drag to walk around, scroll to lean in, hover a tower to inspect it.
               Auto-updates when your repos change.

@@ -1,11 +1,12 @@
-// The sand table itself: a wooden tray of sand with one district per
-// repository and one instanced building per file. Everything is three.js,
-// driven imperatively so a few hundred buildings stay cheap.
-// Districts are connected by roads with intersections.
+// The city itself: one continuous grid of blocks on the page background, one
+// block per repository and one instanced building per file, with the streets
+// running between the blocks. Everything is three.js, driven imperatively so a
+// few hundred buildings stay cheap.
 
 import * as THREE from 'three'
 
 import {
+  CITY_BOUNDS,
   layoutCity,
   layoutBuildings,
   type Building,
@@ -14,32 +15,21 @@ import {
   ROAD_WIDTH,
 } from '../../lib/cityLayout'
 import {
-  CITY_OWNER,
   fileUrl,
   type CityFile,
   type DistrictData,
   type RepoSummary,
 } from '../../lib/githubCity'
 import { createTamagotchi, type PetMood, type Tamagotchi } from './tamagotchi'
-import {
-  makeContactShadow,
-  makeDistrictLabel,
-  makeGlowTexture,
-  makePlaque,
-  makeSandTexture,
-  makeWoodTexture,
-} from './textures'
+import { makeContactShadow, makeDistrictLabel, makeGlowTexture } from './textures'
 
-const TABLE_W = 18.8
-const TABLE_D = 13.4
-const SAND_TOP = 0.14
-const PLATE_H = 0.1
-const DESK_Y = -1.95
-const BUILDING_BASE = SAND_TOP + PLATE_H
-const LABEL_BAND = 0.55
-const PET_POSITION = new THREE.Vector3(10.8, DESK_Y, 3.4)
+const GROUND_Y = 0
+const BLOCK_H = 0.12
+const BUILDING_BASE = BLOCK_H
+const LABEL_BAND = 0.7
+const PET_POSITION = new THREE.Vector3(-8, GROUND_Y, CITY_BOUNDS.d / 2 + 2.4)
 
-const PLATE_COLOURS = ['#b6a17d', '#ae9a80', '#bfa67f', '#a99a86', '#c0ac87', '#b5a58a']
+const BLOCK_COLOURS = ['#202a27', '#232d29', '#1e2724', '#262f2b', '#212a27', '#28322e']
 
 export interface HoverPayload {
   kind: 'file' | 'repo'
@@ -83,15 +73,10 @@ interface DistrictNode {
   data: DistrictData | null
   files: CityFile[]
   layout: Building[]
-  plate: THREE.Mesh
+  block: THREE.Mesh
   label: THREE.Mesh
   labelTexture: THREE.CanvasTexture
   appear: number
-}
-
-interface RoadNodeMesh {
-  node: THREE.Mesh
-  dataIndex: number
 }
 
 export class CityScene {
@@ -105,8 +90,9 @@ export class CityScene {
   private readonly pointer = new THREE.Vector2(0, 0)
   private readonly pointerPx = { x: 0, y: 0 }
   private readonly nodes = new Map<string, DistrictNode>()
-  private readonly roadNodes: RoadNodeMesh[] = []
-  private readonly roadSegments: { mesh: THREE.Mesh; from: number; to: number }[] = []
+  private readonly roadMeshes: THREE.Mesh[] = []
+  private roadMarks: THREE.InstancedMesh | null = null
+  private roadCount = 0
   private readonly highlight: THREE.LineSegments
   private readonly pet: Tamagotchi
   private readonly observer: ResizeObserver
@@ -121,10 +107,10 @@ export class CityScene {
   private dragDistance = 0
   private lastPointer = { x: 0, y: 0 }
   private lastInput = 0
-  private yaw = 0.72
-  private pitch = 0.72
-  private distance = 27
-  private readonly target = new THREE.Vector3(0, 0.9, 0.3)
+  private yaw = 0.62
+  private pitch = 0.48
+  private distance = 38
+  private readonly target = new THREE.Vector3(0, 1.4, 0)
   private frame = 0
 
   constructor(container: HTMLElement, callbacks: CityCallbacks) {
@@ -145,12 +131,12 @@ export class CityScene {
     this.renderer.domElement.style.height = '100%'
     container.appendChild(this.renderer.domElement)
 
-    this.scene.fog = new THREE.FogExp2(0x0a0c0b, 0.012)
+    this.scene.fog = new THREE.FogExp2(0x0a0c0b, 0.014)
 
-    this.camera = new THREE.PerspectiveCamera(36, 1, 0.5, 120)
+    this.camera = new THREE.PerspectiveCamera(40, 1, 0.5, 240)
     this.camera.position.set(17, 20, 18)
 
-    this.buildTable()
+    this.buildGround()
     this.buildLights()
 
     const highlightGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1))
@@ -160,7 +146,7 @@ export class CityScene {
     this.scene.add(this.highlight)
 
     this.pet = createTamagotchi()
-    this.pet.group.scale.setScalar(1.45)
+    this.pet.group.scale.setScalar(1.6)
     this.pet.group.position.copy(PET_POSITION)
     this.scene.add(this.pet.group)
 
@@ -178,19 +164,20 @@ export class CityScene {
     this.hovered = null
     this.hoveredFile = null
 
-    // Clear existing roads
-    for (const rn of this.roadNodes) {
-      rn.node.geometry.dispose()
-      ;(rn.node.material as THREE.MeshStandardMaterial).dispose()
-      rn.node.removeFromParent()
+    // Clear the streets
+    for (const mesh of this.roadMeshes) {
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+      mesh.removeFromParent()
     }
-    this.roadNodes.length = 0
-    for (const rs of this.roadSegments) {
-      rs.mesh.geometry.dispose()
-      ;(rs.mesh.material as THREE.MeshStandardMaterial).dispose()
-      rs.mesh.removeFromParent()
+    this.roadMeshes.length = 0
+    if (this.roadMarks) {
+      this.roadMarks.geometry.dispose()
+      ;(this.roadMarks.material as THREE.Material).dispose()
+      this.roadMarks.removeFromParent()
+      this.roadMarks = null
     }
-    this.roadSegments.length = 0
+    this.roadCount = 0
 
     const { plots, roadNetwork } = layoutCity(repos)
     for (const plot of plots) this.addNode(plot)
@@ -300,106 +287,58 @@ export class CityScene {
     }
   }
 
-  private buildTable(): void {
-    const sandTexture = makeSandTexture()
-    const woodTexture = makeWoodTexture()
+  private buildGround(): void {
+    // The city stands straight on the page background: one ground plane, no tray.
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(240, 240),
+      new THREE.MeshStandardMaterial({ color: '#0e1413', roughness: 0.96, metalness: 0 }),
+    )
+    ground.rotation.x = -Math.PI / 2
+    ground.position.y = GROUND_Y
+    ground.receiveShadow = true
+    this.scene.add(ground)
 
-    const deskGeometry = new THREE.PlaneGeometry(90, 90)
-    const deskMaterial = new THREE.MeshStandardMaterial({ color: '#0d1210', roughness: 0.97, metalness: 0 })
-    const desk = new THREE.Mesh(deskGeometry, deskMaterial)
-    desk.rotation.x = -Math.PI / 2
-    desk.position.y = DESK_Y
-    desk.receiveShadow = true
-    this.scene.add(desk)
-
-    const glowGeometry = new THREE.PlaneGeometry(34, 26)
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      map: makeGlowTexture(),
-      transparent: true,
-      opacity: 0.75,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    })
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial)
+    const glow = new THREE.Mesh(
+      new THREE.PlaneGeometry(CITY_BOUNDS.w * 1.9, CITY_BOUNDS.d * 2.1),
+      new THREE.MeshBasicMaterial({
+        map: makeGlowTexture(),
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    )
     glow.rotation.x = -Math.PI / 2
-    glow.position.y = DESK_Y + 0.01
+    glow.position.set(0, GROUND_Y + 0.004, 0)
     this.scene.add(glow)
 
-    const woodMaterial = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.78, metalness: 0.04 })
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(TABLE_W, 0.55, TABLE_D), woodMaterial)
-    slab.position.y = -0.275
-    slab.castShadow = true
-    slab.receiveShadow = true
-    this.scene.add(slab)
-
-    const rimDepth = 0.42
-    const rimHeight = 0.62
-    const rimPieces: [number, number, number, number, number][] = [
-      [TABLE_W, rimHeight, rimDepth, 0, TABLE_D / 2 - rimDepth / 2],
-      [TABLE_W, rimHeight, rimDepth, 0, -(TABLE_D / 2 - rimDepth / 2)],
-      [rimDepth, rimHeight, TABLE_D - rimDepth * 2, TABLE_W / 2 - rimDepth / 2, 0],
-      [rimDepth, rimHeight, TABLE_D - rimDepth * 2, -(TABLE_W / 2 - rimDepth / 2), 0],
-    ]
-    for (const [width, height, depth, x, z] of rimPieces) {
-      const piece = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), woodMaterial)
-      piece.position.set(x, height / 2, z)
-      piece.castShadow = true
-      piece.receiveShadow = true
-      this.scene.add(piece)
-    }
-
-    const legMaterial = new THREE.MeshStandardMaterial({ color: '#2c2018', roughness: 0.85 })
-    for (const x of [-(TABLE_W / 2 - 1.1), TABLE_W / 2 - 1.1]) {
-      for (const z of [-(TABLE_D / 2 - 1.1), TABLE_D / 2 - 1.1]) {
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, 0.5), legMaterial)
-        leg.position.set(x, -0.55 - 0.7, z)
-        leg.castShadow = true
-        this.scene.add(leg)
-      }
-    }
-
-    const sand = new THREE.Mesh(
-      new THREE.BoxGeometry(TABLE_W - 1.0, SAND_TOP, TABLE_D - 1.0),
-      new THREE.MeshStandardMaterial({ map: sandTexture, roughness: 0.98, metalness: 0 }),
+    const petShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.2, 3.2),
+      new THREE.MeshBasicMaterial({
+        map: makeContactShadow(),
+        transparent: true,
+        depthWrite: false,
+        opacity: 0.85,
+      }),
     )
-    sand.position.y = SAND_TOP / 2
-    sand.receiveShadow = true
-    this.scene.add(sand)
-
-    const plaqueMaterial = new THREE.MeshStandardMaterial({
-      map: makePlaque(CITY_OWNER, 'connected districts · every file a building'),
-      roughness: 0.42,
-      metalness: 0.5,
-    })
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 0.84), plaqueMaterial)
-    plaque.position.set(0, 0.33, TABLE_D / 2 + 0.01)
-    this.scene.add(plaque)
-
-    const shadowMaterial = new THREE.MeshBasicMaterial({
-      map: makeContactShadow(),
-      transparent: true,
-      depthWrite: false,
-      opacity: 0.85,
-    })
-    const petShadow = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.6), shadowMaterial)
     petShadow.rotation.x = -Math.PI / 2
-    petShadow.position.set(PET_POSITION.x, DESK_Y + 0.012, PET_POSITION.z)
+    petShadow.position.set(PET_POSITION.x, GROUND_Y + 0.008, PET_POSITION.z)
     this.scene.add(petShadow)
   }
 
   private buildLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0xffe7c2, 0x101815, 0.75))
+    this.scene.add(new THREE.HemisphereLight(0xffe7c2, 0x101815, 0.95))
 
     const key = new THREE.DirectionalLight(0xfff0d2, 2.4)
-    key.position.set(9, 17, 10)
+    key.position.set(16, 26, 18)
     key.castShadow = true
-    key.shadow.mapSize.set(1024, 1024)
-    key.shadow.camera.left = -17
-    key.shadow.camera.right = 17
-    key.shadow.camera.top = 17
-    key.shadow.camera.bottom = -17
+    key.shadow.mapSize.set(2048, 2048)
+    key.shadow.camera.left = -24
+    key.shadow.camera.right = 24
+    key.shadow.camera.top = 24
+    key.shadow.camera.bottom = -24
     key.shadow.camera.near = 1
-    key.shadow.camera.far = 60
+    key.shadow.camera.far = 90
     key.shadow.bias = -0.0004
     key.shadow.normalBias = 0.02
     this.scene.add(key)
@@ -414,88 +353,85 @@ export class CityScene {
   }
 
   private buildRoads(roadNetwork: RoadNetwork): void {
-    // Performance: use instanced mesh for road segments
-    const roadMaterial = new THREE.MeshStandardMaterial({
-      color: '#5a5a5a',
-      roughness: 0.9,
-      metalness: 0,
-    })
-
+    const roadMaterial = new THREE.MeshStandardMaterial({ color: '#2c3331', roughness: 0.94, metalness: 0.02 })
     const roadGeometry = new THREE.PlaneGeometry(ROAD_WIDTH, 1)
     roadGeometry.rotateX(-Math.PI / 2)
 
-    // Create road segments
+    const marks: THREE.Matrix4[] = []
+    const dummy = new THREE.Object3D()
+
     for (const segment of roadNetwork.segments) {
       const from = roadNetwork.nodes[segment.from]
       const to = roadNetwork.nodes[segment.to]
-
       const dx = to.x - from.x
       const dz = to.z - from.z
       const length = Math.hypot(dx, dz)
-
       if (length < 0.01) continue
 
-      const mesh = new THREE.Mesh(roadGeometry.clone(), roadMaterial)
-      mesh.scale.set(1, 1, length)
-      mesh.position.set((from.x + to.x) / 2, SAND_TOP + 0.005, (from.z + to.z) / 2)
-      mesh.rotation.y = Math.atan2(dx, dz)
+      const angle = Math.atan2(dx, dz)
+      const mesh = new THREE.Mesh(roadGeometry, roadMaterial)
+      // Reach into each junction so the grid reads as one continuous surface.
+      mesh.scale.set(1, 1, length + ROAD_WIDTH)
+      mesh.position.set((from.x + to.x) / 2, GROUND_Y + 0.02, (from.z + to.z) / 2)
+      mesh.rotation.y = angle
       mesh.receiveShadow = true
       this.scene.add(mesh)
+      this.roadMeshes.push(mesh)
 
-      this.roadSegments.push({ mesh, from: segment.from, to: segment.to })
-    }
-
-    // Create intersection nodes (small raised circles)
-    const intersectionMaterial = new THREE.MeshStandardMaterial({
-      color: '#6a6a6a',
-      roughness: 0.8,
-      metalness: 0.1,
-    })
-
-    const nodeGeometry = new THREE.CylinderGeometry(ROAD_WIDTH / 2 + 0.08, ROAD_WIDTH / 2 + 0.08, 0.04, 12)
-
-    for (const node of roadNetwork.nodes) {
-      if (node.isIntersection) {
-        const mesh = new THREE.Mesh(nodeGeometry, intersectionMaterial)
-        mesh.position.set(node.x, SAND_TOP + 0.02, node.z)
-        mesh.receiveShadow = true
-        this.scene.add(mesh)
-        this.roadNodes.push({ node: mesh, dataIndex: this.roadNodes.length })
+      for (let travelled = 0.6; travelled < length; travelled += 1.15) {
+        const t = travelled / length
+        dummy.position.set(from.x + dx * t, GROUND_Y + 0.031, from.z + dz * t)
+        dummy.rotation.set(0, angle, 0)
+        dummy.updateMatrix()
+        marks.push(dummy.matrix.clone())
       }
     }
+
+    if (marks.length > 0) {
+      const markGeometry = new THREE.PlaneGeometry(0.075, 0.5)
+      markGeometry.rotateX(-Math.PI / 2)
+      const markMaterial = new THREE.MeshBasicMaterial({ color: '#c8cdb6', transparent: true, opacity: 0.42 })
+      const markMesh = new THREE.InstancedMesh(markGeometry, markMaterial, marks.length)
+      marks.forEach((matrix, index) => markMesh.setMatrixAt(index, matrix))
+      markMesh.instanceMatrix.needsUpdate = true
+      this.scene.add(markMesh)
+      this.roadMarks = markMesh
+    }
+
+    this.roadCount = roadNetwork.segments.length
   }
 
   private addNode(plot: Plot): void {
     const { rect, repo, index } = plot
 
-    const plate = new THREE.Mesh(
-      new THREE.BoxGeometry(rect.w, PLATE_H, rect.d),
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(rect.w, BLOCK_H, rect.d),
       new THREE.MeshStandardMaterial({
-        color: PLATE_COLOURS[index % PLATE_COLOURS.length],
-        roughness: 0.9,
-        metalness: 0,
+        color: BLOCK_COLOURS[index % BLOCK_COLOURS.length],
+        roughness: 0.92,
+        metalness: 0.02,
       }),
     )
-    plate.position.set(rect.x, SAND_TOP + PLATE_H / 2, rect.z)
-    plate.receiveShadow = true
-    plate.userData.node = null
-    this.scene.add(plate)
+    block.position.set(rect.x, GROUND_Y + BLOCK_H / 2, rect.z)
+    block.receiveShadow = true
+    block.userData.node = null
+    this.scene.add(block)
 
-    const border = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(rect.w, PLATE_H, rect.d)),
-      new THREE.LineBasicMaterial({ color: '#6c5a3c', transparent: true, opacity: 0.45 }),
+    const kerb = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(rect.w, BLOCK_H, rect.d)),
+      new THREE.LineBasicMaterial({ color: '#4b5b54', transparent: true, opacity: 0.5 }),
     )
-    border.position.copy(plate.position)
-    this.scene.add(border)
+    kerb.position.copy(block.position)
+    this.scene.add(kerb)
 
     const labelTexture = makeDistrictLabel(repo.name, `${repo.language ?? 'repository'} · ${formatKb(repo.sizeKb)}`)
-    const labelWidth = Math.min(rect.w * 0.8, 3.2)
+    const labelWidth = Math.min(rect.w * 0.72, 3.6)
     const label = new THREE.Mesh(
       new THREE.PlaneGeometry(labelWidth, labelWidth * (176 / 1024)),
       new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true, depthWrite: false, toneMapped: false }),
     )
     label.rotation.x = -Math.PI / 2
-    label.position.set(rect.x, BUILDING_BASE + 0.008, rect.z + rect.d / 2 - LABEL_BAND / 2)
+    label.position.set(rect.x, BUILDING_BASE + 0.01, rect.z + rect.d / 2 - LABEL_BAND / 2)
     this.scene.add(label)
 
     const buildings = new THREE.Group()
@@ -511,17 +447,17 @@ export class CityScene {
       data: null,
       files: [],
       layout: [],
-      plate,
+      block,
       label,
       labelTexture,
       appear: this.reducedMotion ? 1 : 0,
     }
-    plate.userData.node = node
+    block.userData.node = node
     this.nodes.set(repo.name, node)
   }
 
   private removeNode(node: DistrictNode): void {
-    for (const object of [node.plate, node.label, node.buildings]) {
+    for (const object of [node.block, node.label, node.buildings]) {
       object.removeFromParent()
       object.traverse((child) => {
         if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
@@ -604,14 +540,14 @@ export class CityScene {
 
   private onWheel = (event: WheelEvent) => {
     event.preventDefault()
-    this.distance = THREE.MathUtils.clamp(this.distance * Math.exp(event.deltaY * 0.0011), 11, 46)
+    this.distance = THREE.MathUtils.clamp(this.distance * Math.exp(event.deltaY * 0.0011), 16, 68)
     this.lastInput = performance.now()
   }
 
   private resetCamera = () => {
-    this.yaw = 0.72
-    this.pitch = 0.72
-    this.distance = 27
+    this.yaw = 0.62
+    this.pitch = 0.48
+    this.distance = 38
   }
 
   private clearHover(): void {
@@ -648,11 +584,11 @@ export class CityScene {
       }
     }
 
-    const plates: THREE.Mesh[] = []
-    for (const node of this.nodes.values()) plates.push(node.plate)
-    const plateHits = this.raycaster.intersectObjects(plates, false)
-    if (plateHits.length > 0) {
-      const node = plateHits[0].object.userData.node as DistrictNode | undefined
+    const blocks: THREE.Mesh[] = []
+    for (const node of this.nodes.values()) blocks.push(node.block)
+    const blockHits = this.raycaster.intersectObjects(blocks, false)
+    if (blockHits.length > 0) {
+      const node = blockHits[0].object.userData.node as DistrictNode | undefined
       if (node) {
         this.setHover(node, null, null, `repo:${node.repo.name}`)
         return
@@ -729,7 +665,7 @@ export class CityScene {
       buildings,
       lines,
       bytes,
-      roads: this.roadSegments.length,
+      roads: this.roadCount,
     })
   }
 
@@ -743,7 +679,7 @@ export class CityScene {
 
   private updateCamera(): void {
     const fit = this.camera.aspect < 1.5 ? 1.5 / Math.max(0.6, this.camera.aspect) : 1
-    const distance = THREE.MathUtils.clamp(this.distance * fit, 11, 62)
+    const distance = THREE.MathUtils.clamp(this.distance * fit, 16, 84)
     const horizontal = Math.cos(this.pitch) * distance
     this.camera.position.set(
       this.target.x + horizontal * Math.sin(this.yaw),

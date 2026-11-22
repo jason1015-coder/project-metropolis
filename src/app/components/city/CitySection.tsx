@@ -238,7 +238,8 @@ export function CitySection() {
   const flipY = Boolean(hover && hover.y + 250 > viewHeight)
 
   return (
-    <section id="city" className="mx-auto max-w-[1400px] scroll-mt-20 px-5 pt-24 sm:px-8 sm:pt-32">
+    <section id="city" className="relative scroll-mt-20 pt-24 sm:pt-28">
+      <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
       <div className="flex items-end justify-between gap-6">
         <Lines as="h2" className="font-display text-[44px] sm:text-[64px]" lines={['Connected City']} />
         <Reveal className="mono hidden pb-2 text-[11.5px] uppercase tracking-[0.14em] text-faint sm:block">
@@ -248,7 +249,7 @@ export function CitySection() {
 
       <div className="mt-6 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
         <p className="max-w-2xl text-pretty text-[16.5px] leading-relaxed text-muted">
-          Every repository gets a connected district, every file a building, and the districts are linked by roads.
+          One continuous city: every repository is a district, every file a building, and the streets run between the blocks.
           Height is lines of code, footprint is file size, and it is all read from GitHub as you watch.
           Drag to walk around, scroll to lean in. The tamagotchi watches the loading and reads out what you hover.
           Updates automatically when your repos change.
@@ -268,28 +269,30 @@ export function CitySection() {
         </dl>
       </div>
 
-      <div
-        ref={stageRef}
-        className="relative mt-10 overflow-hidden rounded-[24px] border border-line bg-[radial-gradient(90%_80%_at_50%_0%,#16201c,#0a0d0c_70%)]"
-      >
+      </div>
+
+      <div ref={stageRef} className="relative mt-8 w-full overflow-hidden">
         <div
           ref={canvasRef}
           role="img"
-          aria-label="A 3D sand table with connected districts linked by roads, where each GitHub repository is a district and each file is a building, with a tamagotchi sitting beside it."
-          className="relative h-[clamp(440px,70vh,740px)] w-full touch-none"
+          aria-label="One continuous 3D city where each GitHub repository is a district, each file is a building, and streets run between the blocks, with a tamagotchi standing at the edge."
+          className="relative h-[clamp(520px,84vh,880px)] w-full touch-none"
         />
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-wrap items-start justify-between gap-3 p-4 sm:p-5">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-bg via-bg/40 to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bg via-bg/50 to-transparent" />
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-[1400px] flex-wrap items-start justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5">
           <p className="mono flex items-center gap-2 text-[10.5px] uppercase tracking-[0.16em] text-faint">
             <span className={`round size-1.5 rounded-full ${status === 'error' ? 'bg-danger' : 'bg-accent'} ${status === 'loading' ? 'animate-pulse' : ''}`} />
-            sand table / {status === 'error' ? 'offline' : status === 'loading' ? 'surveying' : 'live'}
+            continuous city / {status === 'error' ? 'offline' : status === 'loading' ? 'surveying' : 'live'}
           </p>
           <p className="mono hidden text-[10px] uppercase tracking-[0.14em] text-faint sm:block">
             drag · scroll · hover a tower
           </p>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4 sm:p-5">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto flex max-w-[1400px] flex-wrap items-end justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5">
           <div className="min-w-[180px]">
             <p className="mono text-[10px] uppercase tracking-[0.1em] text-faint">
               {surveyed}/{repos.length || '–'} districts surveyed
@@ -309,7 +312,7 @@ export function CitySection() {
           <p className="mono text-right text-[10px] uppercase leading-relaxed tracking-[0.12em] text-faint">
             area = repo size · height = lines
             <br />
-            connected by roads · auto-updates
+            streets between blocks · auto-updates
           </p>
         </div>
 
@@ -404,7 +407,7 @@ export function CitySection() {
         )}
       </div>
 
-      <div className="mono mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[10px] uppercase tracking-[0.13em] text-faint">
+      <div className="mono mx-auto mt-4 flex max-w-[1400px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 text-[10px] uppercase tracking-[0.13em] text-faint sm:px-8">
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {legend.length === 0 && <li>reading languages…</li>}
           {legend.map((item) => (
