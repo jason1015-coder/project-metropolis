@@ -154,6 +154,12 @@ export class CityScene {
   private readonly renderer: THREE.WebGLRenderer
   private readonly scene = new THREE.Scene()
   private readonly camera: THREE.PerspectiveCamera
+  private readonly mapCamera: THREE.OrthographicCamera
+  private readonly fog = new THREE.FogExp2(0x0a0c0b, 0.014)
+  private readonly mapTarget = new THREE.Vector2(0, 0)
+  private mapMode = false
+  private mapZoom = 1
+  private mapHalfW = 20
   private readonly clock = new THREE.Clock()
   private readonly raycaster = new THREE.Raycaster()
   private readonly pointer = new THREE.Vector2(0, 0)
@@ -218,10 +224,16 @@ export class CityScene {
     this.renderer.domElement.style.height = '100%'
     container.appendChild(this.renderer.domElement)
 
-    this.scene.fog = new THREE.FogExp2(0x0a0c0b, 0.014)
+    this.scene.fog = this.fog
 
     this.camera = new THREE.PerspectiveCamera(40, 1, 0.5, 240)
     this.camera.position.set(17, 20, 18)
+
+    // 2D map mode: straight down, no perspective, so blocks read as a plan.
+    this.mapCamera = new THREE.OrthographicCamera(-20, 20, 20, -20, 0.1, 400)
+    this.mapCamera.position.set(0, 140, 0.001)
+    this.mapCamera.up.set(0, 0, -1)
+    this.mapCamera.lookAt(0, 0, 0)
 
     this.buildGround()
     this.buildLights()
@@ -283,6 +295,29 @@ export class CityScene {
       return
     }
     this.clearHover()
+  }
+
+  /** Swap the walking camera for a flat plan view, and back. */
+  setMapMode(on: boolean): void {
+    if (this.mapMode === on) return
+    this.mapMode = on
+    this.scene.fog = on ? null : this.fog
+    // Long shadows thrown from the side read as smears on a plan view.
+    this.renderer.shadowMap.enabled = !on
+    this.renderer.shadowMap.needsUpdate = true
+    // The pet is a little standing character; on a plan it is just a blob.
+    this.pet.group.visible = !on
+    this.pressed.clear()
+    this.hoverPinned = false
+    this.clearHover()
+    this.mapTarget.set(0, 0)
+    this.mapZoom = 1
+    this.resize()
+    this.lastInput = performance.now()
+  }
+
+  private get view(): THREE.Camera {
+    return this.mapMode ? this.mapCamera : this.camera
   }
 
   dispose(): void {
@@ -804,6 +839,14 @@ export class CityScene {
     const strafe = Number(this.pressed.has('d')) - Number(this.pressed.has('a'))
     if (forward === 0 && strafe === 0) return
 
+    if (this.mapMode) {
+      const pace = this.mapHalfW * 0.9 * (this.pressed.has('shift') ? 2 : 1) * delta
+      this.mapTarget.x = THREE.MathUtils.clamp(this.mapTarget.x + strafe * pace, -CITY_BOUNDS.w / 2 - 4, CITY_BOUNDS.w / 2 + 4)
+      this.mapTarget.y = THREE.MathUtils.clamp(this.mapTarget.y - forward * pace, -CITY_BOUNDS.d / 2 - 4, CITY_BOUNDS.d / 2 + 4)
+      this.lastInput = performance.now()
+      return
+    }
+
     const pace = this.distance * 0.45 * (this.pressed.has('shift') ? 2.2 : 1) * delta
     const sin = Math.sin(this.yaw)
     const cos = Math.cos(this.yaw)
@@ -843,6 +886,12 @@ export class CityScene {
       const dy = event.clientY - this.lastPointer.y
       this.lastPointer = { x: event.clientX, y: event.clientY }
       this.dragDistance += Math.abs(dx) + Math.abs(dy)
+      if (this.mapMode) {
+        const scale = (this.mapHalfW * 2) / Math.max(1, rect.width)
+        this.mapTarget.x = THREE.MathUtils.clamp(this.mapTarget.x - dx * scale, -CITY_BOUNDS.w / 2 - 4, CITY_BOUNDS.w / 2 + 4)
+        this.mapTarget.y = THREE.MathUtils.clamp(this.mapTarget.y - dy * scale, -CITY_BOUNDS.d / 2 - 4, CITY_BOUNDS.d / 2 + 4)
+        return
+      }
       this.yaw -= dx * 0.005
       this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.004, 0.18, 1.35)
     }
@@ -874,6 +923,17 @@ export class CityScene {
   }
 
   private onWheel = (event: WheelEvent) => {
+    if (this.mapMode) {
+      // Same rule as the walk-around view: a modifier, or the wheel stays
+      // with the page.
+      if (!event.ctrlKey && !event.metaKey) return
+      event.preventDefault()
+      this.mapZoom = THREE.MathUtils.clamp(this.mapZoom * Math.exp(-event.deltaY * 0.0013), 0.7, 6)
+      this.resize()
+      this.lastInput = performance.now()
+      return
+    }
+
     // The city fills most of the viewport, so a plain wheel has to keep
     // scrolling the page. Zoom only when asked for with a modifier, or while a
     // gesture is already pinned at a zoom limit, so it cannot leak into the page
@@ -893,6 +953,12 @@ export class CityScene {
   }
 
   private resetCamera = () => {
+    if (this.mapMode) {
+      this.mapTarget.set(0, 0)
+      this.mapZoom = 1
+      this.resize()
+      return
+    }
     this.yaw = 0.62
     this.pitch = 0.42
     this.distance = 30
@@ -913,7 +979,7 @@ export class CityScene {
 
   private pick(): void {
     if (!this.pointerInside) return
-    this.raycaster.setFromCamera(this.pointer, this.camera)
+    this.raycaster.setFromCamera(this.pointer, this.view)
 
     if (this.buildingMesh) {
       const hits = this.raycaster.intersectObject(this.buildingMesh, false)
@@ -1218,11 +1284,30 @@ export class CityScene {
     const width = this.container.clientWidth || 1
     const height = this.container.clientHeight || 1
     this.renderer.setSize(width, height, false)
-    this.camera.aspect = width / height
+
+    const aspect = width / height
+    this.camera.aspect = aspect
     this.camera.updateProjectionMatrix()
+
+    // Fit the whole footprint, then apply the map zoom.
+    const halfDepth = CITY_BOUNDS.d / 2 + 3
+    const halfWidth = CITY_BOUNDS.w / 2 + 3
+    const halfHeight = Math.max(halfDepth, halfWidth / Math.max(0.2, aspect)) / this.mapZoom
+    this.mapHalfW = halfHeight * aspect
+    this.mapCamera.left = -this.mapHalfW
+    this.mapCamera.right = this.mapHalfW
+    this.mapCamera.top = halfHeight
+    this.mapCamera.bottom = -halfHeight
+    this.mapCamera.updateProjectionMatrix()
   }
 
   private updateCamera(): void {
+    if (this.mapMode) {
+      this.mapCamera.position.set(this.mapTarget.x, 140, this.mapTarget.y + 0.001)
+      this.mapCamera.lookAt(this.mapTarget.x, 0, this.mapTarget.y)
+      return
+    }
+
     const fit = this.camera.aspect < 1.5 ? 1.5 / Math.max(0.6, this.camera.aspect) : 1
     const distance = THREE.MathUtils.clamp(this.distance * fit, 16, 84)
     const horizontal = Math.cos(this.pitch) * distance
@@ -1241,7 +1326,7 @@ export class CityScene {
     const elapsed = this.clock.elapsedTime
     const now = performance.now()
 
-    if (!this.dragging && !this.hovered && !this.reducedMotion && now - this.lastInput > 3500) {
+    if (!this.mapMode && !this.dragging && !this.hovered && !this.reducedMotion && now - this.lastInput > 3500) {
       this.yaw += delta * 0.032
     }
     this.moveCamera(delta)
@@ -1287,12 +1372,12 @@ export class CityScene {
       if (this.linkFade < 0.01 && this.linkTarget === 0) this.disposeLinks()
     }
 
-    this.pet.update(elapsed, this.camera)
+    this.pet.update(elapsed, this.view)
 
     this.frame += 1
     if (this.frame % 3 === 0) this.pick()
 
-    this.renderer.render(this.scene, this.camera)
+    this.renderer.render(this.scene, this.view)
   }
 }
 

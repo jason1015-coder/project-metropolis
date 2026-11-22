@@ -21,6 +21,7 @@ export function CitySection() {
   const [hover, setHover] = useState<HoverEvent | null>(null)
   const [stats, setStats] = useState<CityStats>(EMPTY_STATS)
   const [attempt, setAttempt] = useState(0)
+  const [mapMode, setMapMode] = useState(false)
 
   useEffect(() => {
     const element = canvasRef.current
@@ -157,9 +158,33 @@ export function CitySection() {
             <span className={`round size-1.5 rounded-full ${status === 'error' ? 'bg-danger' : 'bg-accent'} ${status === 'loading' ? 'animate-pulse' : ''}`} />
             continuous city / {status === 'error' ? 'no layout' : status === 'loading' ? 'loading' : 'ready'}
           </p>
-          <p className="mono hidden text-[10px] uppercase tracking-[0.14em] text-faint sm:block">
-            WASD move · drag · ⌘/ctrl scroll
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="mono hidden shrink-0 whitespace-nowrap text-[10px] uppercase tracking-[0.14em] text-faint sm:block">
+              {mapMode ? 'drag to pan · ⌘/ctrl + scroll' : 'WASD · drag · ⌘/ctrl + scroll'}
+            </p>
+            <div className="pointer-events-auto flex shrink-0 items-center gap-0.5 rounded-full border border-line-strong/70 bg-bg/70 p-0.5 backdrop-blur">
+              {[
+                { label: '3D', next: false },
+                { label: '2D map', next: true },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  aria-pressed={mapMode === item.next}
+                  onClick={() => {
+                    if (mapMode === item.next) return
+                    setMapMode(item.next)
+                    sceneRef.current?.setMapMode(item.next)
+                  }}
+                  className={`mono rounded-full px-2.5 py-1 text-[9.5px] uppercase tracking-[0.14em] transition-colors ${
+                    mapMode === item.next ? 'bg-accent/15 text-accent' : 'text-faint hover:text-fg'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {status === 'loading' && (
