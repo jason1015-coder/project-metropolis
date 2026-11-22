@@ -63,6 +63,12 @@ const MAX_FOOTPRINT = 1.35
  * solid street wall a downtown block is made of.
  */
 const MAX_BUILDINGS = 300
+/**
+ * The little streets that separate one file's building from the next. The width
+ * is fixed rather than a fraction of the plot, so every district reads as a
+ * grid of lanes instead of a solid mass.
+ */
+const LANE_WIDTH = 0.13
 
 export interface RoadNode {
   x: number
@@ -187,10 +193,21 @@ function weightOf(repo: RepoSummary): number {
     : 1 + Math.log1p(Math.max(0, repo.sizeKb))
 }
 
-export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
-  if (files.length === 0) return []
+interface BlockGrid {
+  area: Rect
+  cols: number
+  rows: number
+  cellW: number
+  cellD: number
+  laneW: number
+  laneD: number
+}
+
+/** The plot grid of one district: its cells, and the lanes between them. */
+function blockGrid(files: CityFile[], district: Rect): BlockGrid | null {
+  if (files.length === 0) return null
   const area = shrink(district, FRONTAGE)
-  if (area.w <= 0 || area.d <= 0) return []
+  if (area.w <= 0 || area.d <= 0) return null
 
   const count = Math.min(files.length, MAX_BUILDINGS)
   const aspect = area.w / area.d
@@ -198,6 +215,45 @@ export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
   const rows = Math.ceil(count / cols)
   const cellW = area.w / cols
   const cellD = area.d / rows
+
+  // Narrow cells keep a lane that still fits, so a dense district never prints
+  // buildings on top of each other.
+  return {
+    area,
+    cols,
+    rows,
+    cellW,
+    cellD,
+    laneW: Math.min(LANE_WIDTH, cellW * 0.45),
+    laneD: Math.min(LANE_WIDTH, cellD * 0.45),
+  }
+}
+
+/**
+ * The little roads inside one district: a lane on every plot boundary, so each
+ * file's building is separated from its neighbours by street.
+ */
+export function layoutLanes(files: CityFile[], district: Rect): Rect[] {
+  const grid = blockGrid(files, district)
+  if (!grid) return []
+
+  const lanes: Rect[] = []
+  const left = grid.area.x - grid.area.w / 2
+  const top = grid.area.z - grid.area.d / 2
+
+  for (let col = 1; col < grid.cols; col += 1) {
+    lanes.push({ x: left + grid.cellW * col, z: grid.area.z, w: grid.laneW, d: grid.area.d })
+  }
+  for (let row = 1; row < grid.rows; row += 1) {
+    lanes.push({ x: grid.area.x, z: top + grid.cellD * row, w: grid.area.w, d: grid.laneD })
+  }
+  return lanes
+}
+
+export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
+  const grid = blockGrid(files, district)
+  if (!grid) return []
+  const { area, cols, rows, cellW, cellD, laneW, laneD } = grid
 
   // Street frontage first: a block lines its own roads before the middle of the
   // block is filled in, so every district meets the streets with buildings.
@@ -227,14 +283,14 @@ export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
     // cell down to a thin alley, and the tall towers keep only a little more air
     // than the low-rise around them.
     const tall = height / (0.4 + MAX_HEIGHT)
-    const fill = 0.97 - 0.08 * tall * unit(seed, 2)
-    const w = clamp(cellW * fill * (0.9 + unit(seed, 3) * 0.1), 0.1, MAX_FOOTPRINT)
-    const d = clamp(cellD * fill * (0.9 + unit(seed, 4) * 0.1), 0.1, MAX_FOOTPRINT)
+    const setback = 1 - 0.05 * tall * unit(seed, 2)
+    const w = clamp((cellW - laneW) * setback * (0.94 + unit(seed, 3) * 0.06), 0.06, MAX_FOOTPRINT)
+    const d = clamp((cellD - laneD) * setback * (0.94 + unit(seed, 4) * 0.06), 0.06, MAX_FOOTPRINT)
 
     return {
       file,
-      x: plot.x + (unit(seed, 12) - 0.5) * cellW * 0.06,
-      z: plot.z + (unit(seed, 13) - 0.5) * cellD * 0.06,
+      x: plot.x + (unit(seed, 12) - 0.5) * laneW * 0.25,
+      z: plot.z + (unit(seed, 13) - 0.5) * laneD * 0.25,
       w,
       d,
       h: height,

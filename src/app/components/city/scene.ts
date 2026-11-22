@@ -9,9 +9,11 @@ import {
   CITY_BOUNDS,
   layoutBuildings,
   layoutCity,
+  layoutLanes,
   ROAD_WIDTH,
   type Building,
   type Plot,
+  type Rect,
   type RoadNetwork,
 } from '../../lib/cityLayout'
 import {
@@ -100,6 +102,8 @@ interface DistrictNode {
   data: DistrictData | null
   files: CityFile[]
   layout: Building[]
+  /** The little roads between this district's buildings. */
+  lanes: Rect[]
   label: THREE.Mesh
   labelTexture: THREE.CanvasTexture
   boundary: THREE.Group
@@ -132,6 +136,7 @@ export class CityScene {
   private roadCount = 0
   private buildingMesh: THREE.InstancedMesh | null = null
   private detailMesh: THREE.InstancedMesh | null = null
+  private laneMesh: THREE.InstancedMesh | null = null
   private pickList: CityBuilding[] = []
   private rise = 1
   private readonly highlight: THREE.LineSegments
@@ -214,6 +219,7 @@ export class CityScene {
 
     for (const district of layout.districts) this.applyDistrict(district)
     this.buildLinkIndex()
+    this.rebuildLanes()
     this.rebuildCity()
 
     this.renderer.shadowMap.needsUpdate = true
@@ -275,7 +281,7 @@ export class CityScene {
     // not a tray of separate blocks.
     const paving = new THREE.Mesh(
       new THREE.PlaneGeometry(CITY_BOUNDS.w + ROAD_WIDTH, CITY_BOUNDS.d + ROAD_WIDTH),
-      new THREE.MeshStandardMaterial({ color: '#20262c', roughness: 0.94, metalness: 0.03 }),
+      new THREE.MeshStandardMaterial({ color: '#2b333c', roughness: 0.94, metalness: 0.03 }),
     )
     paving.rotation.x = -Math.PI / 2
     paving.position.set(CITY_BOUNDS.x, GROUND_Y + 0.006, CITY_BOUNDS.z)
@@ -359,6 +365,7 @@ export class CityScene {
     this.roadCount = 0
 
     this.disposeCityMeshes()
+    this.disposeLanes()
     this.highlight.visible = false
   }
 
@@ -470,6 +477,7 @@ export class CityScene {
       data: null,
       files: [],
       layout: [],
+      lanes: [],
       label,
       labelTexture,
       boundary,
@@ -492,6 +500,7 @@ export class CityScene {
     node.data = data
     node.files = data.files
     node.layout = layoutBuildings(data.files, node.plot.rect)
+    node.lanes = layoutLanes(data.files, node.plot.rect)
 
     // Float the boundary clear of the tallest tower in this district, and light
     // that tower yellow: one landmark per district, like the reference city.
@@ -588,6 +597,45 @@ export class CityScene {
     const start = Math.max(0.001, this.rise)
     this.buildingMesh.scale.y = start
     if (this.detailMesh) this.detailMesh.scale.y = start
+  }
+
+  /** One instanced mesh for every little road between every pair of buildings. */
+  private rebuildLanes(): void {
+    this.disposeLanes()
+
+    const lanes: Rect[] = []
+    for (const node of this.nodes.values()) lanes.push(...node.lanes)
+    if (lanes.length === 0) return
+
+    const geometry = new THREE.PlaneGeometry(1, 1)
+    geometry.rotateX(-Math.PI / 2)
+    const material = new THREE.MeshStandardMaterial({ color: '#39424d', roughness: 0.95, metalness: 0.02 })
+    const mesh = new THREE.InstancedMesh(geometry, material, lanes.length)
+    mesh.receiveShadow = true
+
+    const matrix = new THREE.Matrix4()
+    const quaternion = new THREE.Quaternion()
+    const position = new THREE.Vector3()
+    const scale = new THREE.Vector3()
+    lanes.forEach((lane, index) => {
+      position.set(lane.x, GROUND_Y + 0.014, lane.z)
+      scale.set(lane.w, 1, lane.d)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(index, matrix)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.computeBoundingSphere()
+
+    this.laneMesh = mesh
+    this.scene.add(mesh)
+  }
+
+  private disposeLanes(): void {
+    if (!this.laneMesh) return
+    this.laneMesh.removeFromParent()
+    this.laneMesh.geometry.dispose()
+    ;(this.laneMesh.material as THREE.Material).dispose()
+    this.laneMesh = null
   }
 
   private disposeCityMeshes(): void {
