@@ -10,9 +10,9 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-22T10:00:41Z
+updated 2026-11-22T10:22:53Z
 districts 11
-buildings 2325
+buildings 2334
 
 district audio-pitch-converter
   description a simple chrome extension to convert all pitches to others
@@ -5111,32 +5111,33 @@ district project-metropolis
   language TypeScript
   stars 0
   forks 0
-  size 64
+  size 159
   branch main
-  pushed 2026-11-22T09:59:39Z
+  pushed 2026-11-22T10:22:53Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
-  files 23
-  lines 6126
+  files 24
+  lines 10652
   file 62 1936 .github/workflows/city-layout.yml
   file 63 1285 .github/workflows/deploy.yml
   file 7 60 .gitignore
   file 19 759 index.html
   file 1 647 package.json
-  file 2489 114152 public/city-layout.txt
+  file 6526 244986 public/city-layout.txt
   file 12 484 public/favicon.svg
-  file 54 2594 README.md
-  file 323 11565 scripts/survey-city.mjs
+  file 57 3030 README.md
+  file 372 13514 scripts/survey-city.mjs
   file 147 5825 src/app/App.tsx
     import ./components/city/CitySection
     import ./components/Preloader
-  file 369 17456 src/app/components/city/CitySection.tsx
+  file 384 18570 src/app/components/city/CitySection.tsx
     import ../../lib/cityData
     import ../motion
     import ./scene
-  file 1165 39423 src/app/components/city/scene.ts
+  file 1392 47870 src/app/components/city/scene.ts
     import ../../lib/cityLayout
     import ../../lib/cityData
+    import ../../lib/fileLinks
     import ./tamagotchi
     import ./textures
   file 271 9209 src/app/components/city/tamagotchi.ts
@@ -5144,10 +5145,11 @@ district project-metropolis
   file 72 2777 src/app/components/motion.tsx
     import ../lib/cx
   file 49 1919 src/app/components/Preloader.tsx
-  file 295 9308 src/app/lib/cityData.ts
+  file 309 9849 src/app/lib/cityData.ts
   file 381 11905 src/app/lib/cityLayout.ts
     import ./cityData
   file 3 124 src/app/lib/cx.ts
+  file 181 5625 src/app/lib/fileLinks.ts
   file 11 236 src/main.tsx
     import ./app/App
     import ./styles.css
@@ -6482,42 +6484,61 @@ district website
   pushed 2026-11-21T20:01:19Z
   fork false
   url https://github.com/jason1015-coder/website
-  files 23
-  lines 1255
+  files 31
+  lines 3717
   file 63 1381 .github/workflows/deploy.yml
   file 8 85 .gitignore
   file 7 212 deploy.json
   file 19 734 index.html
-  file 38 1026 package.json
+  file 38 1083 package.json
   file 6 463 public/favicon.svg
-  file 58 2383 README.md
+  file 58 2988 README.md
   file 17 572 scripts/postbuild.mjs
-  file 59 1790 src/app/App.tsx
+  file 59 1697 src/app/App.tsx
     import ./components/Footer
     import ./components/Nav
     import ./components/Preloader
     import ./pages/Home
+  file 433 18774 src/app/components/city/CitySection.tsx
+    import ../../lib/githubCity
+    import ../motion
+    import ./scene
+  file 702 23631 src/app/components/city/scene.ts
+    import ../../lib/cityLayout
+    import ../../lib/githubCity
+    import ./tamagotchi
+    import ./textures
+  file 279 9662 src/app/components/city/tamagotchi.ts
+  file 145 4865 src/app/components/city/textures.ts
   file 85 4122 src/app/components/Footer.tsx
     import ../../data/site
     import ./motion
     import ./Nav
   file 79 3131 src/app/components/motion.tsx
     import ../lib/cx
-  file 69 2472 src/app/components/Nav.tsx
+  file 69 2460 src/app/components/Nav.tsx
     import ../../data/site
     import ../lib/cx
   file 53 2037 src/app/components/Preloader.tsx
     import ../../data/site
+  file 190 5822 src/app/lib/cityLayout.ts
+    import ./githubCity
   file 3 124 src/app/lib/cx.ts
-  file 169 6910 src/app/pages/Home.tsx
+  file 435 15135 src/app/lib/githubCity.ts
+    import ../../data/cityRepos
+  file 148 4652 src/app/lib/useGitHubStats.ts
+    import ./githubCity
+  file 169 7643 src/app/pages/Home.tsx
     import ../../data/site
     import ../lib/useGitHubStats
     import ../components/motion
-  file 251 11753 src/data/site.ts
+  file 130 3601 src/data/cityRepos.ts
+    import ../app/lib/githubCity
+  file 251 11678 src/data/site.ts
   file 11 236 src/main.tsx
     import ./app/App
     import ./styles.css
-  file 158 4360 src/styles.css
+  file 158 4204 src/styles.css
   file 25 1106 src/worker/index.ts
   file 30 1089 tests/api.test.ts
     import ../src/worker/index
