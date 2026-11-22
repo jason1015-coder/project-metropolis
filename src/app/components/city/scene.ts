@@ -30,6 +30,8 @@ const LABEL_BAND = 0.7
 const PET_POSITION = new THREE.Vector3(-8, GROUND_Y, CITY_BOUNDS.d / 2 + 2.4)
 
 const BLOCK_COLOURS = ['#202a27', '#232d29', '#1e2724', '#262f2b', '#212a27', '#28322e']
+const ZOOM_MIN = 16
+const ZOOM_MAX = 68
 
 export interface HoverPayload {
   kind: 'file' | 'repo'
@@ -539,8 +541,21 @@ export class CityScene {
   }
 
   private onWheel = (event: WheelEvent) => {
+    // The city fills most of the viewport, so a plain wheel has to keep
+    // scrolling the page. Zoom only when asked for with a modifier, or while a
+    // gesture is already pinned at a zoom limit, so it cannot leak into the page
+    // halfway through.
+    const pinned =
+      (event.deltaY > 0 && this.distance >= ZOOM_MAX - 0.01) ||
+      (event.deltaY < 0 && this.distance <= ZOOM_MIN + 0.01)
+    if (!event.ctrlKey && !event.metaKey && !pinned) return
+
     event.preventDefault()
-    this.distance = THREE.MathUtils.clamp(this.distance * Math.exp(event.deltaY * 0.0011), 16, 68)
+    this.distance = THREE.MathUtils.clamp(
+      this.distance * Math.exp(event.deltaY * 0.0011),
+      ZOOM_MIN,
+      ZOOM_MAX,
+    )
     this.lastInput = performance.now()
   }
 

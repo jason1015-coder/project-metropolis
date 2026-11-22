@@ -251,7 +251,7 @@ export function CitySection() {
         <p className="max-w-2xl text-pretty text-[16.5px] leading-relaxed text-muted">
           One continuous city: every repository is a district, every file a building, and the streets run between the blocks.
           Height is lines of code, footprint is file size, and it is all read from GitHub as you watch.
-          Drag to walk around, scroll to lean in. The tamagotchi watches the loading and reads out what you hover.
+          Drag to walk around, hold ⌘ or Ctrl and scroll to lean in. The tamagotchi watches the loading and reads out what you hover.
           Updates automatically when your repos change.
         </p>
         <dl className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4 lg:gap-x-10">
@@ -288,7 +288,7 @@ export function CitySection() {
             continuous city / {status === 'error' ? 'offline' : status === 'loading' ? 'surveying' : 'live'}
           </p>
           <p className="mono hidden text-[10px] uppercase tracking-[0.14em] text-faint sm:block">
-            drag · scroll · hover a tower
+            drag · ⌘/ctrl scroll · hover a tower
           </p>
         </div>
 
