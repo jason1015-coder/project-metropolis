@@ -119,29 +119,6 @@ export function CitySection() {
     { label: 'roads', value: stats.roads ? String(stats.roads) : '–' },
   ]
 
-  const stage = stageRef.current
-  const canvasLayer = canvasRef.current
-  let layerX = 0
-  let layerY = 0
-  let viewHeight = 0
-  if (stage && canvasLayer) {
-    const stageBox = stage.getBoundingClientRect()
-    const layerBox = canvasLayer.getBoundingClientRect()
-    layerX = layerBox.left - stageBox.left
-    layerY = layerBox.top - stageBox.top
-    viewHeight = layerBox.height
-  }
-  const cardWidth = Math.min(320, Math.max(210, (stage?.clientWidth ?? 320) - 24))
-  const maxLeft = Math.max(8, (stage?.clientWidth ?? 0) - cardWidth - 8)
-  const cardLeft = Math.min(layerX + (hover?.x ?? 0) + 18, maxLeft)
-  // The card carries a whole line map now, so it can be taller than the stage:
-  // open it on the side with more room and cap its height, scrolling the rest
-  // instead of letting the stage clip it.
-  const roomBelow = Math.max(0, viewHeight - (hover?.y ?? 0) - 30)
-  const roomAbove = Math.max(0, (hover?.y ?? 0) - 30)
-  const flipY = Boolean(hover && roomBelow < 460 && roomAbove > roomBelow)
-  const cardMaxHeight = Math.max(220, Math.min(560, flipY ? roomAbove : roomBelow))
-
   return (
     <section id="city" className="relative scroll-mt-20 pt-24 sm:pt-28">
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
@@ -209,121 +186,13 @@ export function CitySection() {
           </div>
         )}
 
-        {hover && (
-          <div
-            onPointerEnter={() => sceneRef.current?.pinHover(true)}
-            onPointerLeave={() => sceneRef.current?.pinHover(false)}
-            className="absolute z-20 w-[min(320px,calc(100%-24px))] overflow-y-auto overscroll-contain rounded-[14px] border border-line-strong bg-bg/92 p-3.5 shadow-[0_18px_40px_-16px_rgb(0_0_0/0.85)] backdrop-blur-md"
-            style={{
-              left: cardLeft,
-              top: flipY ? undefined : layerY + hover.y + 16,
-              bottom: flipY ? (stage?.clientHeight ?? 0) - layerY - hover.y + 16 : undefined,
-              maxHeight: cardMaxHeight,
-            }}
-          >
-            {hover.payload.kind === 'file' ? (
-              <>
-                <p className="mono text-[10px] uppercase tracking-[0.14em] text-faint">{hover.payload.subtitle}</p>
-                <p className="mono mt-1.5 line-clamp-2 break-all text-[12.5px] leading-snug text-fg">
-                  {hover.payload.title}
-                </p>
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line pt-3">
-                  <div>
-                    <dt className="mono text-[9.5px] uppercase tracking-[0.12em] text-faint">lines</dt>
-                    <dd className="text-[14px] tabular-nums text-fg">{hover.payload.lines.toLocaleString('en-GB')}</dd>
-                  </div>
-                  <div>
-                    <dt className="mono text-[9.5px] uppercase tracking-[0.12em] text-faint">size</dt>
-                    <dd className="text-[14px] tabular-nums text-fg">{formatBytes(hover.payload.bytes)}</dd>
-                  </div>
-                  <div className="col-span-2 flex items-center gap-2">
-                    <span className="round size-1.5 rounded-full" style={{ background: hover.payload.color }} />
-                    <span className="mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-                      {hover.payload.language}
-                    </span>
-                  </div>
-                </dl>
-
-                {hover.payload.links && hover.payload.links.length > 0 && (
-                  <div className="mt-3 space-y-2.5 border-t border-line pt-3">
-                    <p className="mono text-[9px] uppercase tracking-[0.14em] text-faint">line map</p>
-                    {hover.payload.links.map((group) => (
-                      <div key={group.kind}>
-                        <p className="mono flex items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-muted">
-                          <span className="round size-1.5 shrink-0 rounded-full" style={{ background: group.color }} />
-                          {group.label}
-                          <span className="text-faint">{group.total}</span>
-                        </p>
-                        <ul className="mt-1 space-y-0.5">
-                          {group.links.map((link) => (
-                            <li key={link.url}>
-                              <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                title={`${link.label} — ${link.meta}`}
-                                className="flex items-baseline gap-1.5 text-[11.5px] leading-snug text-muted transition-colors hover:text-accent"
-                              >
-                                <span className="truncate">{link.label}</span>
-                                <span className="mono shrink-0 text-[9px] uppercase tracking-[0.1em] text-faint">
-                                  {link.meta}
-                                </span>
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <a
-                  href={hover.payload.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mono mt-3 flex items-center gap-1 text-[9.5px] uppercase tracking-[0.12em] text-accent transition-colors hover:text-[#9fcaff]"
-                >
-                  {hover.payload.hint}
-                  <ArrowUpRight className="size-3" />
-                </a>
-              </>
-            ) : (
-              <>
-                <p className="mono text-[10px] uppercase tracking-[0.14em] text-faint">district</p>
-                <p className="font-display mt-1 text-[21px] leading-tight">{hover.payload.title}</p>
-                <p className="mt-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted">{hover.payload.subtitle}</p>
-                <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 border-t border-line pt-3">
-                  <div>
-                    <dt className="mono text-[9.5px] uppercase tracking-[0.1em] text-faint">files</dt>
-                    <dd className="text-[13px] tabular-nums text-fg">
-                      {hover.payload.shown}/{hover.payload.files}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="mono text-[9.5px] uppercase tracking-[0.1em] text-faint">lines</dt>
-                    <dd className="text-[13px] tabular-nums text-fg">{compact(hover.payload.lines)}</dd>
-                  </div>
-                  <div>
-                    <dt className="mono text-[9.5px] uppercase tracking-[0.1em] text-faint">stars</dt>
-                    <dd className="text-[13px] tabular-nums text-fg">{hover.payload.stars ?? 0}</dd>
-                  </div>
-                </dl>
-                <a
-                  href={hover.payload.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mono mt-2.5 flex items-center gap-1 text-[9.5px] uppercase tracking-[0.12em] text-accent transition-colors hover:text-[#9fcaff]"
-                >
-                  {hover.payload.hint}
-                  <ArrowUpRight className="size-3" />
-                </a>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Stats sit in the page under the city, not over it. */}
+      {/* Stats and the hover readout sit in the page under the city, not over it. */}
+      <div
+        onPointerEnter={() => sceneRef.current?.pinHover(true)}
+        onPointerLeave={() => sceneRef.current?.pinHover(false)}
+      >
       <dl className="mx-auto mt-6 grid max-w-[1400px] grid-cols-2 gap-x-8 gap-y-6 border-t border-line/70 px-5 pt-6 sm:grid-cols-4 sm:px-8">
         {statItems.map((item) => (
           <div key={item.label}>
@@ -332,6 +201,121 @@ export function CitySection() {
           </div>
         ))}
       </dl>
+
+        <div className="mx-auto max-w-[1400px] px-5 pt-6 sm:px-8">
+          <div className="rounded-[14px] border border-line-strong/70 bg-bg/60 p-4 sm:p-5">
+            {hover ? (
+              <div className="grid gap-x-10 gap-y-5 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                {hover.payload.kind === 'file' ? (
+                  <>
+                    <div className="min-w-0">
+                      <p className="mono text-[10px] uppercase tracking-[0.14em] text-faint">{hover.payload.subtitle}</p>
+                      <p className="mono mt-1.5 break-all text-[13px] leading-snug text-fg">{hover.payload.title}</p>
+                      <dl className="mt-3 flex flex-wrap items-start gap-x-8 gap-y-3 border-t border-line pt-3">
+                        <div>
+                          <dt className="mono text-[9.5px] uppercase tracking-[0.12em] text-faint">lines</dt>
+                          <dd className="mt-1 text-[15px] tabular-nums text-fg">{hover.payload.lines.toLocaleString('en-GB')}</dd>
+                        </div>
+                        <div>
+                          <dt className="mono text-[9.5px] uppercase tracking-[0.12em] text-faint">size</dt>
+                          <dd className="mt-1 text-[15px] tabular-nums text-fg">{formatBytes(hover.payload.bytes)}</dd>
+                        </div>
+                        <div>
+                          <dt className="mono text-[9.5px] uppercase tracking-[0.12em] text-faint">language</dt>
+                          <dd className="mono mt-1 flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-muted">
+                            <span className="round size-1.5 rounded-full" style={{ background: hover.payload.color }} />
+                            {hover.payload.language}
+                          </dd>
+                        </div>
+                      </dl>
+                      <a
+                        href={hover.payload.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mono mt-3 inline-flex items-center gap-1 text-[9.5px] uppercase tracking-[0.12em] text-accent transition-colors hover:text-[#9fcaff]"
+                      >
+                        {hover.payload.hint}
+                        <ArrowUpRight className="size-3" />
+                      </a>
+                    </div>
+                    <div className="min-w-0">
+                      {hover.payload.links && hover.payload.links.length > 0 && (
+                        <>
+                          <p className="mono text-[9px] uppercase tracking-[0.14em] text-faint">line map</p>
+                          <div className="mt-2 grid max-h-[190px] gap-x-8 gap-y-3 overflow-y-auto overscroll-contain pr-1 sm:grid-cols-2">
+                            {hover.payload.links.map((group) => (
+                              <div key={group.kind} className="min-w-0">
+                                <p className="mono flex items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-muted">
+                                  <span className="round size-1.5 shrink-0 rounded-full" style={{ background: group.color }} />
+                                  {group.label}
+                                  <span className="text-faint">{group.total}</span>
+                                </p>
+                                <ul className="mt-1 space-y-0.5">
+                                  {group.links.map((link) => (
+                                    <li key={link.url}>
+                                      <a
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title={`${link.label} — ${link.meta}`}
+                                        className="flex items-baseline gap-1.5 text-[11.5px] leading-snug text-muted transition-colors hover:text-accent"
+                                      >
+                                        <span className="truncate">{link.label}</span>
+                                        <span className="mono shrink-0 text-[9px] uppercase tracking-[0.1em] text-faint">
+                                          {link.meta}
+                                        </span>
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="min-w-0 lg:col-span-2">
+                    <p className="mono text-[10px] uppercase tracking-[0.14em] text-faint">district</p>
+                    <p className="font-display mt-1 text-[22px] leading-tight">{hover.payload.title}</p>
+                    <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">{hover.payload.subtitle}</p>
+                    <dl className="mt-3 flex flex-wrap items-start gap-x-8 gap-y-3 border-t border-line pt-3">
+                      <div>
+                        <dt className="mono text-[9.5px] uppercase tracking-[0.1em] text-faint">files</dt>
+                        <dd className="mt-1 text-[14px] tabular-nums text-fg">
+                          {hover.payload.shown}/{hover.payload.files}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="mono text-[9.5px] uppercase tracking-[0.1em] text-faint">lines</dt>
+                        <dd className="mt-1 text-[14px] tabular-nums text-fg">{compact(hover.payload.lines)}</dd>
+                      </div>
+                      <div>
+                        <dt className="mono text-[9.5px] uppercase tracking-[0.1em] text-faint">stars</dt>
+                        <dd className="mt-1 text-[14px] tabular-nums text-fg">{hover.payload.stars ?? 0}</dd>
+                      </div>
+                    </dl>
+                    <a
+                      href={hover.payload.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mono mt-3 inline-flex items-center gap-1 text-[9.5px] uppercase tracking-[0.12em] text-accent transition-colors hover:text-[#9fcaff]"
+                    >
+                      {hover.payload.hint}
+                      <ArrowUpRight className="size-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mono text-[10px] uppercase tracking-[0.14em] text-faint">
+                hover a building to read it here · its line map links open on github
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
       <p className="mono mx-auto mt-4 max-w-[1400px] px-5 text-[10px] uppercase leading-relaxed tracking-[0.1em] text-faint sm:px-8">
         {surveyed || '–'} districts · {fileCount ? fileCount.toLocaleString('en-GB') : '–'} files ·{' '}

@@ -938,7 +938,8 @@ export class CityScene {
       }
     }
 
-    this.clearHover()
+    // Nothing under the pointer: keep the last pick instead of dropping it, so
+    // the readout below the canvas survives the walk down to read or click it.
   }
 
   private setHover(node: DistrictNode, file: CityFile | null, building: Building | null, key: string): void {
