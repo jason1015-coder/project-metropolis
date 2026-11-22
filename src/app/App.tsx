@@ -93,10 +93,10 @@ function Home() {
               One continuous 3D city, built from your GitHub repositories.
             </p>
             <p className="mt-4 text-pretty text-[16.5px] leading-relaxed text-muted sm:text-[17.5px]">
-              Every repository is a district in the city, every text file a building, and roads run between the blocks.
-              Height is lines of code, footprint is file size, read live from GitHub.
-              Drag to walk around, scroll to lean in, hover a tower to inspect it.
-              Auto-updates when your repos change.
+              Every repository is a district in one continuous city, every text file a building, and roads run between the blocks.
+              Height is lines of code, footprint is file size, surveyed by a scheduled GitHub Action.
+              Drag to walk around, scroll to lean in, hover a tower to inspect it, and follow its links to neighbouring files.
+              Refreshes whenever the survey runs.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a

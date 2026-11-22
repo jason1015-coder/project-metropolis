@@ -2,7 +2,7 @@
 // Each repository owns a block, its files become buildings on that block, and
 // the streets run between the blocks along a shared grid.
 
-import type { CityFile, RepoSummary } from './githubCity'
+import type { CityFile, RepoSummary } from './cityData'
 
 export interface Rect {
   x: number

@@ -1,36 +1,54 @@
-// The city itself: one continuous grid of blocks on the page background, one
-// block per repository and one instanced building per file, with the streets
-// running between the blocks. Everything is three.js, driven imperatively so a
-// few hundred buildings stay cheap.
+// The city itself: one continuous model. Every repository is a district, every
+// file an instanced building, and all buildings live in one pair of instanced
+// meshes over a single paved ground. Districts are marked by glowing floating
+// boundaries instead of raised plates, so nothing reads as a separate model.
 
 import * as THREE from 'three'
 
 import {
   CITY_BOUNDS,
-  layoutCity,
   layoutBuildings,
+  layoutCity,
+  ROAD_WIDTH,
   type Building,
   type Plot,
   type RoadNetwork,
-  ROAD_WIDTH,
 } from '../../lib/cityLayout'
 import {
   fileUrl,
   type CityFile,
+  type CityLayout,
   type DistrictData,
   type RepoSummary,
-} from '../../lib/githubCity'
+} from '../../lib/cityData'
 import { createTamagotchi, type PetMood, type Tamagotchi } from './tamagotchi'
 import { makeContactShadow, makeDistrictLabel, makeGlowTexture } from './textures'
 
 const GROUND_Y = 0
-const BLOCK_H = 0.12
-const BUILDING_BASE = BLOCK_H
+/** Building bases sit on the pavement, not on a per-district plinth. */
+const BUILDING_BASE = 0.008
+/** Where a district boundary floats before its buildings are known. */
+const BOUNDARY_Y = 0.9
 const PET_POSITION = new THREE.Vector3(-8, GROUND_Y, CITY_BOUNDS.d / 2 + 2.4)
 
-const BLOCK_COLOURS = ['#202a27', '#232d29', '#1e2724', '#262f2b', '#212a27', '#28322e']
 const ZOOM_MIN = 16
 const ZOOM_MAX = 68
+
+/** District light colours: the glow that maps a district's floating boundary. */
+const ACCENTS = ['#63b3ff', '#7fe3c4', '#ffcf7a', '#c9a7ff', '#ff9d7a', '#9fb7ff', '#8ef0dd']
+
+export interface FileLink {
+  label: string
+  meta: string
+  url: string
+}
+
+/** Files related to the hovered one: same name, same type, same district. */
+export interface LinkGroup {
+  kind: 'name' | 'type' | 'district'
+  label: string
+  links: FileLink[]
+}
 
 export interface HoverPayload {
   kind: 'file' | 'repo'
@@ -45,6 +63,7 @@ export interface HoverPayload {
   color?: string
   url: string
   hint: string
+  links?: LinkGroup[]
 }
 
 export interface HoverEvent {
@@ -66,19 +85,31 @@ export interface CityCallbacks {
   onStats: (stats: CityStats) => void
 }
 
+interface FileEntry {
+  node: DistrictNode
+  file: CityFile
+}
+
+interface CityBuilding extends FileEntry {
+  building: Building
+}
+
 interface DistrictNode {
   repo: RepoSummary
   plot: Plot
-  buildings: THREE.Group
-  mesh: THREE.InstancedMesh | null
-  detailMesh: THREE.InstancedMesh | null
   data: DistrictData | null
   files: CityFile[]
   layout: Building[]
-  block: THREE.Mesh
   label: THREE.Mesh
   labelTexture: THREE.CanvasTexture
-  appear: number
+  boundary: THREE.Group
+  boundaryMaterial: THREE.MeshBasicMaterial
+  edgeMaterial: THREE.MeshBasicMaterial
+  /** Height the boundary hovers at: just above the district's own rooftops. */
+  boundaryBase: number
+  pick: THREE.Mesh
+  accent: string
+  phase: number
 }
 
 export class CityScene {
@@ -93,8 +124,14 @@ export class CityScene {
   private readonly pointerPx = { x: 0, y: 0 }
   private readonly nodes = new Map<string, DistrictNode>()
   private readonly roadMeshes: THREE.Mesh[] = []
+  private readonly byName = new Map<string, FileEntry[]>()
+  private readonly byExtension = new Map<string, FileEntry[]>()
   private roadMarks: THREE.InstancedMesh | null = null
   private roadCount = 0
+  private buildingMesh: THREE.InstancedMesh | null = null
+  private detailMesh: THREE.InstancedMesh | null = null
+  private pickList: CityBuilding[] = []
+  private rise = 1
   private readonly highlight: THREE.LineSegments
   private readonly pet: Tamagotchi
   private readonly observer: ResizeObserver
@@ -104,6 +141,8 @@ export class CityScene {
   private hovered: DistrictNode | null = null
   private hoveredFile: CityFile | null = null
   private hoverKey = ''
+  private hoverPinned = false
+  private hoverTimer = 0
   private pointerInside = false
   private dragging = false
   private dragDistance = 0
@@ -160,144 +199,44 @@ export class CityScene {
     this.tick()
   }
 
-  setRepos(repos: RepoSummary[]): void {
-    for (const node of this.nodes.values()) this.removeNode(node)
-    this.nodes.clear()
-    this.hovered = null
-    this.hoveredFile = null
+  /**
+   * Build the whole metropolis at once: one grid of districts on a shared
+   * pavement, one instanced mesh for every building in the city.
+   */
+  setLayout(layout: CityLayout): void {
+    this.clearCity()
 
-    // Clear the streets
-    for (const mesh of this.roadMeshes) {
-      mesh.geometry.dispose()
-      ;(mesh.material as THREE.Material).dispose()
-      mesh.removeFromParent()
-    }
-    this.roadMeshes.length = 0
-    if (this.roadMarks) {
-      this.roadMarks.geometry.dispose()
-      ;(this.roadMarks.material as THREE.Material).dispose()
-      this.roadMarks.removeFromParent()
-      this.roadMarks = null
-    }
-    this.roadCount = 0
-
-    const { plots, roadNetwork } = layoutCity(repos)
+    const { plots, roadNetwork } = layoutCity(layout.repos)
     for (const plot of plots) this.addNode(plot)
-
-    // Build roads
     this.buildRoads(roadNetwork)
 
-    this.renderer.shadowMap.needsUpdate = true
-    this.emitStats()
-  }
-
-  setDistrict(data: DistrictData): void {
-    const node = this.nodes.get(data.repo)
-    if (!node) return
-    const firstBuild = node.mesh === null
-    node.data = data
-    node.files = data.files
-
-    const labelTexture = makeDistrictLabel(
-      node.repo.name,
-      `${data.files.length} buildings · ${data.lines.toLocaleString('en-GB')} lines`,
-    )
-    node.labelTexture.dispose()
-    node.labelTexture = labelTexture
-    const labelMaterial = node.label.material as THREE.MeshBasicMaterial
-    labelMaterial.map = labelTexture
-    labelMaterial.needsUpdate = true
-
-    // The label lives on the street outside the block, so no frontage is set
-    // back to make room for it: all four sides meet their roads the same way.
-    node.layout = layoutBuildings(data.files, node.plot.rect)
-
-    this.clearBuildings(node)
-
-    if (node.layout.length > 0) {
-      const matrix = new THREE.Matrix4()
-      const quaternion = new THREE.Quaternion()
-      const position = new THREE.Vector3()
-      const scale = new THREE.Vector3()
-      const colour = new THREE.Color()
-
-      const geometry = new THREE.BoxGeometry(1, 1, 1)
-      geometry.translate(0, 0.5, 0)
-      const material = new THREE.MeshStandardMaterial({ roughness: 0.58, metalness: 0.1 })
-      const mesh = new THREE.InstancedMesh(geometry, material, node.layout.length)
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      mesh.userData.node = node
-
-      node.layout.forEach((building, index) => {
-        position.set(building.x, 0, building.z)
-        scale.set(building.w, building.h, building.d)
-        matrix.compose(position, quaternion, scale)
-        mesh.setMatrixAt(index, matrix)
-        mesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade))
-      })
-      mesh.instanceMatrix.needsUpdate = true
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-      mesh.computeBoundingSphere()
-
-      node.mesh = mesh
-      node.buildings.add(mesh)
-
-      // Roof massing per file: setbacks, masts and plant boxes are one more
-      // instanced pass, so a block full of varied silhouettes stays cheap.
-      const detailed = node.layout.filter((building) => building.detail !== null)
-      if (detailed.length > 0) {
-        const detailGeometry = new THREE.BoxGeometry(1, 1, 1)
-        detailGeometry.translate(0, 0.5, 0)
-        const detailMaterial = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.16 })
-        const detailMesh = new THREE.InstancedMesh(detailGeometry, detailMaterial, detailed.length)
-        detailMesh.castShadow = true
-
-        detailed.forEach((building, index) => {
-          const detail = building.detail
-          if (!detail) return
-          position.set(building.x + detail.dx, building.h, building.z + detail.dz)
-          scale.set(detail.w, detail.h, detail.d)
-          matrix.compose(position, quaternion, scale)
-          detailMesh.setMatrixAt(index, matrix)
-          detailMesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade + 0.06))
-        })
-        detailMesh.instanceMatrix.needsUpdate = true
-        if (detailMesh.instanceColor) detailMesh.instanceColor.needsUpdate = true
-        detailMesh.computeBoundingSphere()
-
-        node.detailMesh = detailMesh
-        node.buildings.add(detailMesh)
-      }
-
-      if (firstBuild) {
-        node.buildings.scale.y = this.reducedMotion ? 1 : 0.001
-        node.appear = this.reducedMotion ? 1 : 0
-      }
-    }
+    for (const district of layout.districts) this.applyDistrict(district)
+    this.buildLinkIndex()
+    this.rebuildCity()
 
     this.renderer.shadowMap.needsUpdate = true
     this.emitStats()
-  }
-
-  private clearBuildings(node: DistrictNode): void {
-    for (const object of [node.mesh, node.detailMesh]) {
-      if (!object) continue
-      node.buildings.remove(object)
-      object.geometry.dispose()
-      ;(object.material as THREE.Material).dispose()
-    }
-    node.mesh = null
-    node.detailMesh = null
   }
 
   setPet(state: { mood: PetMood; headline: string; detail: string; progress: number }): void {
     this.pet.setState(state)
   }
 
+  /** Keep a hovered building alive while the pointer is on the hover card. */
+  pinHover(pinned: boolean): void {
+    this.hoverPinned = pinned
+    if (pinned) {
+      window.clearTimeout(this.hoverTimer)
+      this.hoverTimer = 0
+      return
+    }
+    this.clearHover()
+  }
+
   dispose(): void {
     this.disposed = true
     cancelAnimationFrame(this.raf)
+    window.clearTimeout(this.hoverTimer)
     this.detach()
     this.observer.disconnect()
     this.pet.dispose()
@@ -329,6 +268,17 @@ export class CityScene {
     ground.position.y = GROUND_Y
     ground.receiveShadow = true
     this.scene.add(ground)
+
+    // One shared pavement under every district: the city is a single surface,
+    // not a tray of separate blocks.
+    const paving = new THREE.Mesh(
+      new THREE.PlaneGeometry(CITY_BOUNDS.w + ROAD_WIDTH, CITY_BOUNDS.d + ROAD_WIDTH),
+      new THREE.MeshStandardMaterial({ color: '#18211f', roughness: 0.94, metalness: 0.03 }),
+    )
+    paving.rotation.x = -Math.PI / 2
+    paving.position.set(CITY_BOUNDS.x, GROUND_Y + 0.006, CITY_BOUNDS.z)
+    paving.receiveShadow = true
+    this.scene.add(paving)
 
     const glow = new THREE.Mesh(
       new THREE.PlaneGeometry(CITY_BOUNDS.w * 1.9, CITY_BOUNDS.d * 2.1),
@@ -384,6 +334,33 @@ export class CityScene {
     this.scene.add(fill)
   }
 
+  private clearCity(): void {
+    for (const node of this.nodes.values()) this.removeNode(node)
+    this.nodes.clear()
+    this.hovered = null
+    this.hoveredFile = null
+    this.hoverKey = ''
+    this.byName.clear()
+    this.byExtension.clear()
+
+    for (const mesh of this.roadMeshes) {
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+      mesh.removeFromParent()
+    }
+    this.roadMeshes.length = 0
+    if (this.roadMarks) {
+      this.roadMarks.geometry.dispose()
+      ;(this.roadMarks.material as THREE.Material).dispose()
+      this.roadMarks.removeFromParent()
+      this.roadMarks = null
+    }
+    this.roadCount = 0
+
+    this.disposeCityMeshes()
+    this.highlight.visible = false
+  }
+
   private buildRoads(roadNetwork: RoadNetwork): void {
     const roadMaterial = new THREE.MeshStandardMaterial({ color: '#2c3331', roughness: 0.94, metalness: 0.02 })
     const roadGeometry = new THREE.PlaneGeometry(ROAD_WIDTH, 1)
@@ -435,26 +412,44 @@ export class CityScene {
 
   private addNode(plot: Plot): void {
     const { rect, repo, index } = plot
+    const accent = accentFor(repo.name)
 
-    const block = new THREE.Mesh(
-      new THREE.BoxGeometry(rect.w, BLOCK_H, rect.d),
-      new THREE.MeshStandardMaterial({
-        color: BLOCK_COLOURS[index % BLOCK_COLOURS.length],
-        roughness: 0.92,
-        metalness: 0.02,
-      }),
-    )
-    block.position.set(rect.x, GROUND_Y + BLOCK_H / 2, rect.z)
-    block.receiveShadow = true
-    block.userData.node = null
-    this.scene.add(block)
+    // The district's map: a glowing band of light floating above that district's
+    // own rooftops, so the boundary reads as a hovering outline rather than as a
+    // plinth the buildings stand on.
+    const boundary = new THREE.Group()
+    boundary.position.set(rect.x, BOUNDARY_Y, rect.z)
 
-    const kerb = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(rect.w, BLOCK_H, rect.d)),
-      new THREE.LineBasicMaterial({ color: '#4b5b54', transparent: true, opacity: 0.5 }),
+    const boundaryMaterial = new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    })
+    const edgeMaterial = new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    })
+    boundary.add(frameMesh(rect.w, rect.d, 0.34, boundaryMaterial, edgeMaterial))
+
+    this.scene.add(boundary)
+
+    // An invisible disc over the district, so hovering empty ground still names
+    // the repository that owns it.
+    const pick = new THREE.Mesh(
+      new THREE.PlaneGeometry(Math.max(0.2, rect.w), Math.max(0.2, rect.d)),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }),
     )
-    kerb.position.copy(block.position)
-    this.scene.add(kerb)
+    pick.rotation.x = -Math.PI / 2
+    pick.position.set(rect.x, GROUND_Y + 0.012, rect.z)
+    this.scene.add(pick)
 
     const labelTexture = makeDistrictLabel(repo.name, `${repo.language ?? 'repository'} · ${formatKb(repo.sizeKb)}`)
     const labelWidth = Math.min(rect.w * 0.72, 3.6)
@@ -463,34 +458,155 @@ export class CityScene {
       new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true, depthWrite: false, toneMapped: false }),
     )
     label.rotation.x = -Math.PI / 2
-    label.position.set(rect.x, GROUND_Y + 0.038, rect.z + rect.d / 2 + ROAD_WIDTH / 2)
+    label.position.set(rect.x, GROUND_Y + 0.042, rect.z + rect.d / 2 + ROAD_WIDTH / 2)
     this.scene.add(label)
-
-    const buildings = new THREE.Group()
-    buildings.position.y = BUILDING_BASE
-    buildings.scale.y = this.reducedMotion ? 1 : 0.001
-    this.scene.add(buildings)
 
     const node: DistrictNode = {
       repo,
       plot,
-      buildings,
-      mesh: null,
-      detailMesh: null,
       data: null,
       files: [],
       layout: [],
-      block,
       label,
       labelTexture,
-      appear: this.reducedMotion ? 1 : 0,
+      boundary,
+      boundaryMaterial,
+      edgeMaterial,
+      boundaryBase: BOUNDARY_Y,
+      pick,
+      accent,
+      phase: index * 0.7,
     }
-    block.userData.node = node
+    pick.userData.node = node
     this.nodes.set(repo.name, node)
   }
 
+  private applyDistrict(data: DistrictData): void {
+    const node = this.nodes.get(data.repo)
+    if (!node) return
+
+    node.data = data
+    node.files = data.files
+    node.layout = layoutBuildings(data.files, node.plot.rect)
+
+    // Float the boundary clear of the tallest tower in this district, so the
+    // outline hovers over the city instead of being lost among the rooftops.
+    let rooftop = 0
+    for (const building of node.layout) rooftop = Math.max(rooftop, building.h)
+    node.boundaryBase = Math.max(BOUNDARY_Y + 0.3, rooftop + 1.1)
+    node.boundary.position.y = node.boundaryBase
+
+    const labelTexture = makeDistrictLabel(
+      node.repo.name,
+      `${data.files.length} buildings · ${data.lines.toLocaleString('en-GB')} lines`,
+    )
+    node.labelTexture.dispose()
+    node.labelTexture = labelTexture
+    const labelMaterial = node.label.material as THREE.MeshBasicMaterial
+    labelMaterial.map = labelTexture
+    labelMaterial.needsUpdate = true
+  }
+
+  /** One instanced mesh for every building and one for every roof detail. */
+  private rebuildCity(): void {
+    this.disposeCityMeshes()
+
+    const entries: CityBuilding[] = []
+    for (const node of this.nodes.values()) {
+      for (const building of node.layout) entries.push({ node, file: building.file, building })
+    }
+    if (entries.length === 0) return
+
+    const matrix = new THREE.Matrix4()
+    const quaternion = new THREE.Quaternion()
+    const position = new THREE.Vector3()
+    const scale = new THREE.Vector3()
+    const colour = new THREE.Color()
+
+    const geometry = new THREE.BoxGeometry(1, 1, 1)
+    geometry.translate(0, 0.5, 0)
+    const material = new THREE.MeshStandardMaterial({ roughness: 0.58, metalness: 0.1 })
+    const mesh = new THREE.InstancedMesh(geometry, material, entries.length)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+
+    entries.forEach((entry, index) => {
+      const { building } = entry
+      position.set(building.x, BUILDING_BASE, building.z)
+      scale.set(building.w, building.h, building.d)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(index, matrix)
+      mesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade))
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    mesh.computeBoundingSphere()
+
+    this.buildingMesh = mesh
+    this.pickList = entries
+    this.scene.add(mesh)
+
+    // Roof massing per file: setbacks, masts and plant boxes are one more
+    // instanced pass, so a city full of varied silhouettes stays cheap.
+    const detailed = entries.filter((entry) => entry.building.detail !== null)
+    if (detailed.length > 0) {
+      const detailGeometry = new THREE.BoxGeometry(1, 1, 1)
+      detailGeometry.translate(0, 0.5, 0)
+      const detailMaterial = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.16 })
+      const detailMesh = new THREE.InstancedMesh(detailGeometry, detailMaterial, detailed.length)
+      detailMesh.castShadow = true
+
+      detailed.forEach((entry, index) => {
+        const { building } = entry
+        const detail = building.detail
+        if (!detail) return
+        position.set(building.x + detail.dx, BUILDING_BASE + building.h, building.z + detail.dz)
+        scale.set(detail.w, detail.h, detail.d)
+        matrix.compose(position, quaternion, scale)
+        detailMesh.setMatrixAt(index, matrix)
+        detailMesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade + 0.06))
+      })
+      detailMesh.instanceMatrix.needsUpdate = true
+      if (detailMesh.instanceColor) detailMesh.instanceColor.needsUpdate = true
+      detailMesh.computeBoundingSphere()
+
+      this.detailMesh = detailMesh
+      this.scene.add(detailMesh)
+    }
+
+    this.rise = this.reducedMotion ? 1 : 0
+    const start = Math.max(0.001, this.rise)
+    this.buildingMesh.scale.y = start
+    if (this.detailMesh) this.detailMesh.scale.y = start
+  }
+
+  private disposeCityMeshes(): void {
+    for (const mesh of [this.buildingMesh, this.detailMesh]) {
+      if (!mesh) continue
+      mesh.removeFromParent()
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+    }
+    this.buildingMesh = null
+    this.detailMesh = null
+    this.pickList = []
+  }
+
+  /** Index every file by name and by type, so hovering can offer neighbours. */
+  private buildLinkIndex(): void {
+    this.byName.clear()
+    this.byExtension.clear()
+    for (const node of this.nodes.values()) {
+      for (const file of node.files) {
+        const entry: FileEntry = { node, file }
+        push(this.byName, basename(file.path), entry)
+        push(this.byExtension, extensionOf(file.path), entry)
+      }
+    }
+  }
+
   private removeNode(node: DistrictNode): void {
-    for (const object of [node.block, node.label, node.buildings]) {
+    for (const object of [node.label, node.boundary, node.pick]) {
       object.removeFromParent()
       object.traverse((child) => {
         if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
@@ -499,8 +615,8 @@ export class CityScene {
           for (const material of materials) material.dispose()
         }
       })
-      if (object === node.label) node.labelTexture.dispose()
     }
+    node.labelTexture.dispose()
     this.highlight.visible = false
   }
 
@@ -568,7 +684,13 @@ export class CityScene {
   private onPointerLeave = () => {
     this.pointerInside = false
     this.dragging = false
-    this.clearHover()
+    if (this.hoverPinned) return
+    // The hover card sits over the canvas and offers links, so give the pointer
+    // a moment to reach it before the selection is dropped.
+    window.clearTimeout(this.hoverTimer)
+    this.hoverTimer = window.setTimeout(() => {
+      if (!this.hoverPinned) this.clearHover()
+    }, 320)
   }
 
   private onWheel = (event: WheelEvent) => {
@@ -610,31 +732,23 @@ export class CityScene {
     if (!this.pointerInside) return
     this.raycaster.setFromCamera(this.pointer, this.camera)
 
-    const meshes: THREE.InstancedMesh[] = []
-    for (const node of this.nodes.values()) {
-      if (node.mesh) meshes.push(node.mesh)
-    }
-
-    const buildingHits = this.raycaster.intersectObjects(meshes, false)
-    if (buildingHits.length > 0) {
-      const hit = buildingHits[0]
-      const mesh = hit.object as THREE.InstancedMesh
-      const node = mesh.userData.node as DistrictNode | undefined
-      const index = hit.instanceId
-      if (node && index !== undefined) {
-        const building = node.layout[index]
-        if (building) {
-          this.setHover(node, building.file, building, `${node.repo.name}:${building.file.path}`)
+    if (this.buildingMesh) {
+      const hits = this.raycaster.intersectObject(this.buildingMesh, false)
+      const index = hits[0]?.instanceId
+      if (index !== undefined) {
+        const entry = this.pickList[index]
+        if (entry) {
+          this.setHover(entry.node, entry.file, entry.building, `${entry.node.repo.name}:${entry.file.path}`)
           return
         }
       }
     }
 
-    const blocks: THREE.Mesh[] = []
-    for (const node of this.nodes.values()) blocks.push(node.block)
-    const blockHits = this.raycaster.intersectObjects(blocks, false)
-    if (blockHits.length > 0) {
-      const node = blockHits[0].object.userData.node as DistrictNode | undefined
+    const picks: THREE.Mesh[] = []
+    for (const node of this.nodes.values()) picks.push(node.pick)
+    const hits = this.raycaster.intersectObjects(picks, false)
+    if (hits.length > 0) {
+      const node = hits[0].object.userData.node as DistrictNode | undefined
       if (node) {
         this.setHover(node, null, null, `repo:${node.repo.name}`)
         return
@@ -649,7 +763,7 @@ export class CityScene {
     this.hoveredFile = file
 
     if (building) {
-      const rise = node.buildings.scale.y
+      const rise = this.buildingMesh?.scale.y ?? 1
       this.highlight.visible = true
       this.highlight.position.set(building.x, BUILDING_BASE + (building.h * rise) / 2, building.z)
       this.highlight.scale.set(building.w * 1.16, building.h * rise + 0.02, building.d * 1.16)
@@ -676,8 +790,52 @@ export class CityScene {
       language: file.language,
       color: file.color,
       url: fileUrl(node.repo, file.path),
-      hint: 'click to open the file',
+      hint: 'open the file on github',
+      links: this.fileLinks(node, file),
     }
+  }
+
+  /**
+   * Neighbours of the hovered file: the same file name elsewhere, other files of
+   * the same type, and the rest of its own district. Every one is a link.
+   */
+  private fileLinks(node: DistrictNode, file: CityFile): LinkGroup[] {
+    const groups: LinkGroup[] = []
+    const used = new Set([linkKey(node, file)])
+
+    const take = (
+      kind: LinkGroup['kind'],
+      label: string,
+      entries: FileEntry[],
+      limit: number,
+      metaOf: (entry: FileEntry) => string,
+    ) => {
+      const links: FileLink[] = []
+      for (const entry of entries) {
+        const key = linkKey(entry.node, entry.file)
+        if (used.has(key)) continue
+        used.add(key)
+        links.push({
+          label: entry.file.path,
+          meta: metaOf(entry),
+          url: fileUrl(entry.node.repo, entry.file.path),
+        })
+        if (links.length >= limit) break
+      }
+      if (links.length > 0) groups.push({ kind, label, links })
+    }
+
+    const elsewhereFirst = (entries: FileEntry[]) =>
+      [...entries].sort(
+        (a, b) =>
+          Number(a.node === node) - Number(b.node === node) || a.file.path.localeCompare(b.file.path),
+      )
+
+    take('name', 'same name', elsewhereFirst(this.byName.get(basename(file.path)) ?? []), 3, (entry) => entry.node.repo.name)
+    take('type', 'same type', elsewhereFirst(this.byExtension.get(extensionOf(file.path)) ?? []), 3, (entry) => entry.node.repo.name)
+    take('district', 'same district', siblings(node, file), 3, (entry) => dirnameOf(entry.file.path))
+
+    return groups
   }
 
   private repoPayload(node: DistrictNode): HoverPayload {
@@ -693,22 +851,20 @@ export class CityScene {
       stars: node.repo.stars,
       language: node.repo.language ?? undefined,
       url: node.repo.url,
-      hint: 'click to open the repository',
+      hint: 'open the repository',
     }
   }
 
   private emitStats(): void {
-    let buildings = 0
     let lines = 0
     let bytes = 0
     for (const node of this.nodes.values()) {
-      buildings += node.layout.length
       lines += node.data?.lines ?? 0
       bytes += node.data?.bytes ?? 0
     }
     this.callbacks.onStats({
       districts: this.nodes.size,
-      buildings,
+      buildings: this.pickList.length,
       lines,
       bytes,
       roads: this.roadCount,
@@ -747,16 +903,23 @@ export class CityScene {
     }
     this.updateCamera()
 
-    let rising = false
-    for (const node of this.nodes.values()) {
-      if (node.appear < 1) {
-        node.appear = Math.min(1, node.appear + delta * 1.5)
-        const eased = 1 - Math.pow(1 - node.appear, 3)
-        node.buildings.scale.y = 0.001 + eased * 0.999
-        rising = true
-      }
+    if (this.rise < 1) {
+      this.rise = Math.min(1, this.rise + delta * 1.5)
+      const eased = 1 - Math.pow(1 - this.rise, 3)
+      if (this.buildingMesh) this.buildingMesh.scale.y = Math.max(0.001, eased)
+      if (this.detailMesh) this.detailMesh.scale.y = Math.max(0.001, eased)
+      this.renderer.shadowMap.needsUpdate = true
     }
-    if (rising) this.renderer.shadowMap.needsUpdate = true
+
+    // The district boundaries breathe and drift, and the hovered district lights up.
+    for (const node of this.nodes.values()) {
+      const pulse = this.reducedMotion ? 0.5 : Math.sin(elapsed * 1.15 + node.phase) * 0.5 + 0.5
+      const active = node === this.hovered
+      node.boundaryMaterial.opacity = (active ? 0.7 : 0.34) + pulse * 0.16
+      node.edgeMaterial.opacity = (active ? 1 : 0.82) + pulse * 0.18
+      node.boundary.position.y =
+        node.boundaryBase + (this.reducedMotion ? 0 : Math.sin(elapsed * 0.7 + node.phase) * 0.07)
+    }
 
     this.pet.update(elapsed, this.camera)
 
@@ -765,6 +928,96 @@ export class CityScene {
 
     this.renderer.render(this.scene, this.camera)
   }
+}
+
+/**
+ * A glowing floating frame: a soft flat ribbon with a raised light bar along it,
+ * so the district boundary is legible from above and from the side.
+ */
+function frameMesh(
+  w: number,
+  d: number,
+  band: number,
+  bandMaterial: THREE.Material,
+  barMaterial: THREE.Material,
+): THREE.Group {
+  const group = new THREE.Group()
+  const halfW = Math.max(0.05, w / 2)
+  const halfD = Math.max(0.05, d / 2)
+
+  const strip = (width: number, depth: number, x: number, z: number) => {
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), bandMaterial)
+    mesh.rotation.x = -Math.PI / 2
+    mesh.position.set(x, 0, z)
+    group.add(mesh)
+  }
+  strip(w, band, 0, -halfD)
+  strip(w, band, 0, halfD)
+  strip(band, d, -halfW, 0)
+  strip(band, d, halfW, 0)
+
+  const bar = (width: number, depth: number, x: number, z: number) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.09, depth), barMaterial)
+    mesh.position.set(x, 0, z)
+    group.add(mesh)
+  }
+  bar(w, 0.1, 0, -halfD)
+  bar(w, 0.1, 0, halfD)
+  bar(0.1, d, -halfW, 0)
+  bar(0.1, d, halfW, 0)
+
+  return group
+}
+
+
+function accentFor(name: string): string {
+  let hash = 0
+  for (let index = 0; index < name.length; index += 1) {
+    hash = (Math.imul(hash, 31) + name.charCodeAt(index)) >>> 0
+  }
+  return ACCENTS[hash % ACCENTS.length]
+}
+
+function push(map: Map<string, FileEntry[]>, key: string, entry: FileEntry): void {
+  const bucket = map.get(key)
+  if (bucket) bucket.push(entry)
+  else map.set(key, [entry])
+}
+
+function linkKey(node: DistrictNode, file: CityFile): string {
+  return `${node.repo.name}:${file.path}`
+}
+
+function basename(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
+
+function dirnameOf(path: string): string {
+  const slash = path.lastIndexOf('/')
+  return slash > 0 ? path.slice(0, slash) : '.'
+}
+
+function extensionOf(path: string): string {
+  const name = basename(path).toLowerCase()
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1) : name
+}
+
+/** Files of the same district, nearest in the tree first. */
+function siblings(node: DistrictNode, file: CityFile): FileEntry[] {
+  const target = file.path.split('/')
+  return node.files
+    .filter((candidate) => candidate.path !== file.path)
+    .map((candidate) => {
+      const parts = candidate.path.split('/')
+      let shared = 0
+      while (shared < parts.length - 1 && shared < target.length - 1 && parts[shared] === target[shared]) {
+        shared += 1
+      }
+      return { file: candidate, shared }
+    })
+    .sort((a, b) => b.shared - a.shared || a.file.path.localeCompare(b.file.path))
+    .map((entry) => ({ node, file: entry.file }))
 }
 
 function formatKb(sizeKb: number): string {
