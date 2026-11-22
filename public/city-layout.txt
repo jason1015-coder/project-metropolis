@@ -10,9 +10,9 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-22T10:22:53Z
-districts 11
-buildings 2334
+updated 2026-11-22T18:39:42Z
+districts 13
+buildings 2579
 
 district audio-pitch-converter
   description a simple chrome extension to convert all pitches to others
@@ -402,18 +402,19 @@ district jason1015-coder
   language JavaScript
   stars 0
   forks 0
-  size 115
+  size 118
   branch main
-  pushed 2026-11-20T19:41:54Z
+  pushed 2026-11-22T14:28:47Z
   fork false
   url https://github.com/jason1015-coder/jason1015-coder
-  files 5
-  lines 440
+  files 6
+  lines 457
+  file 15 859 .github/FUNDING.yml
   file 50 1982 .github/tamagotchi-notifier.yml
   file 50 1468 .github/workflows/tamagotchi.yml
   file 77 3093 README.md
   file 210 10695 scripts/tamagotchi.mjs
-  file 53 4439 tamagotchi.svg
+  file 55 4536 tamagotchi.svg
 
 district manager-ext
   description 
@@ -443,7 +444,7 @@ district nanocoder
   language TypeScript
   stars 0
   forks 0
-  size 33067
+  size 44141
   branch main
   pushed 2026-11-22T10:00:41Z
   fork true
@@ -5106,35 +5107,50 @@ district nanocoder
     import ../types/core
     import ./templates/mcp-templates
 
+district pandora
+  description the editor that designs to be hated, no big companies , no trackers, 100% pure chaos
+  language null
+  stars 0
+  forks 0
+  size 0
+  branch main
+  pushed 2026-11-22T18:39:42Z
+  fork false
+  url https://github.com/jason1015-coder/pandora
+  files 0
+  lines 0
+
 district project-metropolis
   description my project/work displayed as a city
   language TypeScript
   stars 0
   forks 0
-  size 159
+  size 261
   branch main
-  pushed 2026-11-22T10:22:53Z
+  pushed 2026-11-22T16:49:53Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
-  files 24
-  lines 10652
+  files 26
+  lines 10854
+  file 15 859 .github/FUNDING.yml
   file 62 1936 .github/workflows/city-layout.yml
   file 63 1285 .github/workflows/deploy.yml
+  file 36 1225 .github/workflows/notify-tamagotchi.yml
   file 7 60 .gitignore
   file 19 759 index.html
   file 1 647 package.json
-  file 6526 244986 public/city-layout.txt
+  file 6547 245737 public/city-layout.txt
   file 12 484 public/favicon.svg
   file 57 3030 README.md
   file 372 13514 scripts/survey-city.mjs
   file 147 5825 src/app/App.tsx
     import ./components/city/CitySection
     import ./components/Preloader
-  file 384 18570 src/app/components/city/CitySection.tsx
+  file 384 19142 src/app/components/city/CitySection.tsx
     import ../../lib/cityData
     import ../motion
     import ./scene
-  file 1392 47870 src/app/components/city/scene.ts
+  file 1522 53439 src/app/components/city/scene.ts
     import ../../lib/cityLayout
     import ../../lib/cityData
     import ../../lib/fileLinks
@@ -5180,6 +5196,320 @@ district quick-note-ext
   file 68 2378 popup.html
   file 194 5944 popup.js
   file 120 3853 README.md
+
+district scipturalite
+  description lite version of scriptura - https://github.com/jason1015-coder/scriptura
+  language C++
+  stars 0
+  forks 0
+  size 66883
+  branch main
+  pushed 2026-11-22T17:31:04Z
+  fork false
+  url https://github.com/jason1015-coder/scipturalite
+  files 240
+  lines 39639
+  file 32 708 .github/ISSUE_TEMPLATE/bug_report.md
+  file 10 126 .github/ISSUE_TEMPLATE/custom.md
+  file 20 595 .github/ISSUE_TEMPLATE/feature_request.md
+  file 311 10822 .github/workflows/build.yml
+  file 214 8330 .github/workflows/deploy.yml
+  file 98 3572 .github/workflows/dev-release.yml
+  file 154 5614 .github/workflows/test.yml
+  file 180 2061 .gitignore
+  file 341 12436 CMakeLists.txt
+  file 129 9167 CONTRIBUTING.md
+  file 10 242 deployment/linux/scriptura.desktop
+  file 93 2353 deployment/windows/deploy-windows.bat
+  file 77 2024 deployment/windows/package-windows.bat
+  file 126 4453 deployment/windows/scriptura.nsi
+  file 447 31205 include/scriptura/rust_backend.h
+  file 55 2814 include/scriptura/scriptura_actions.h
+  file 21 1065 LICENSE
+  file 255 10612 README.md
+  file 49 1837 run.sh
+  file 43 928 scripts/build.bat
+  file 33 1091 scripts/build.sh
+  file 28 819 scripts/convert-icon.ps1
+  file 20 503 scripts/run_tests.sh
+  file 14 313 scripts/run.sh
+  file 1631 61782 src/codeeditor.cpp
+  file 254 8566 src/codeeditor.h
+  file 297 10116 src/customtitlebar.cpp
+  file 61 1793 src/customtitlebar.h
+  file 18 609 src/entitlements.plist
+  file 365 18890 src/fileicons.cpp
+  file 104 3802 src/fileicons.h
+  file 26 851 src/Info.plist.in
+  file 132 3688 src/internals/crashhandler.cpp
+  file 13 182 src/internals/crashhandler.h
+  file 495 16830 src/internals/settings_store.cpp
+  file 117 5163 src/internals/settings_store.h
+  file 632 27071 src/languageregistry.cpp
+  file 87 3057 src/languageregistry.h
+  file 891 25184 src/main.cpp
+  file 399 13756 src/mainwindow_actions.cpp
+  file 352 13209 src/mainwindow_events.cpp
+  file 906 35364 src/mainwindow_tabs.cpp
+  file 983 47710 src/mainwindow_theme.cpp
+  file 1436 61153 src/mainwindow.cpp
+  file 444 16875 src/mainwindow.h
+  file 238 5293 src/mainwindow.ui
+  file 67 4185 src/resources.qrc
+  file 3 229 src/resources/icons/app-icon.svg
+  file 5 318 src/resources/icons/archive.svg
+  file 4 329 src/resources/icons/build.svg
+  file 3 195 src/resources/icons/check.svg
+  file 3 201 src/resources/icons/close.svg
+  file 4 898 src/resources/icons/config.svg
+  file 4 253 src/resources/icons/console.svg
+  file 4 443 src/resources/icons/cpp.svg
+  file 4 441 src/resources/icons/csharp.svg
+  file 4 444 src/resources/icons/css.svg
+  file 4 444 src/resources/icons/dart.svg
+  file 4 440 src/resources/icons/elixir.svg
+  file 3 206 src/resources/icons/file-tree.svg
+  file 4 268 src/resources/icons/file.svg
+  file 5 337 src/resources/icons/folder-code.svg
+  file 8 403 src/resources/icons/folder-git.svg
+  file 5 327 src/resources/icons/folder-image.svg
+  file 4 288 src/resources/icons/folder-test.svg
+  file 3 256 src/resources/icons/folder.svg
+  file 6 324 src/resources/icons/git.svg
+  file 3 941 src/resources/icons/github.svg
+  file 7 354 src/resources/icons/gitignore.svg
+  file 4 450 src/resources/icons/go.svg
+  file 4 441 src/resources/icons/haskell.svg
+  file 4 444 src/resources/icons/html.svg
+  file 5 294 src/resources/icons/image.svg
+  file 4 263 src/resources/icons/inspector.svg
+  file 5 306 src/resources/icons/install.svg
+  file 4 444 src/resources/icons/java.svg
+  file 4 441 src/resources/icons/javascript.svg
+  file 4 443 src/resources/icons/json.svg
+  file 4 440 src/resources/icons/kotlin.svg
+  file 4 244 src/resources/icons/license.svg
+  file 5 292 src/resources/icons/lock.svg
+  file 4 444 src/resources/icons/lua.svg
+  file 4 450 src/resources/icons/markdown.svg
+  file 4 439 src/resources/icons/objectivec.svg
+  file 4 440 src/resources/icons/perl.svg
+  file 4 443 src/resources/icons/php.svg
+  file 4 440 src/resources/icons/python.svg
+  file 4 439 src/resources/icons/r.svg
+  file 4 440 src/resources/icons/ruby.svg
+  file 4 441 src/resources/icons/rust.svg
+  file 4 445 src/resources/icons/scala.svg
+  file 4 226 src/resources/icons/search.svg
+  file 4 898 src/resources/icons/settings.svg
+  file 4 441 src/resources/icons/shell.svg
+  file 4 444 src/resources/icons/sql.svg
+  file 3 231 src/resources/icons/svg-image.svg
+  file 4 445 src/resources/icons/swift.svg
+  file 3 211 src/resources/icons/text.svg
+  file 4 444 src/resources/icons/toml.svg
+  file 4 441 src/resources/icons/typescript.svg
+  file 3 218 src/resources/icons/xml.svg
+  file 4 444 src/resources/icons/yaml.svg
+  file 1118 39921 src/rust_adapter.cpp
+  file 450 19935 src/rust_adapter.h
+  file 72 2604 src/rust_backend/Cargo.toml
+  file 123 3797 src/rust_backend/src/blame_engine.rs
+  file 146 4573 src/rust_backend/src/config_validator.rs
+  file 463 15194 src/rust_backend/src/dap/client.rs
+    import crate::framer::LengthPrefixedFramer
+  file 3 44 src/rust_backend/src/dap/mod.rs
+    import self::client
+  file 146 4425 src/rust_backend/src/debug_config.rs
+  file 189 5104 src/rust_backend/src/debug_session.rs
+  file 202 5977 src/rust_backend/src/diff_engine.rs
+  file 612 19655 src/rust_backend/src/emmet_engine.rs
+  file 183 6178 src/rust_backend/src/encoding_engine.rs
+  file 187 5607 src/rust_backend/src/eventbus.rs
+  file 1383 56465 src/rust_backend/src/ffi.rs
+    import crate::lsp::LspClient
+    import crate::dap::DapClient
+    import crate::debug_session::DebugSession
+    import crate::debug_config::DebugConfigurationManager
+    import crate::eventbus::EventBus
+    import crate::task_runner::TaskRunner
+    import crate::updater::Updater
+    import crate::version_fetcher::VersionFetcher
+    import crate::workspace::Workspace
+    import crate::config_validator::ConfigValidator
+    import crate::framer::LengthPrefixedFramer
+    import crate::language_registry::LanguageRegistry
+    import crate::language_server_manager::LanguageServerManager
+    import crate::ui_actions::UiActionHandler
+  file 245 8328 src/rust_backend/src/framer.rs
+  file 273 8778 src/rust_backend/src/language_registry.rs
+  file 100 2783 src/rust_backend/src/language_server_manager.rs
+    import crate::lsp::LspClient
+  file 111 3364 src/rust_backend/src/lib.rs
+    import self::config_validator
+    import self::dap
+    import self::debug_config
+    import self::debug_session
+    import self::eventbus
+    import self::framer
+    import self::language_registry
+    import self::language_server_manager
+    import self::lsp
+    import self::settings
+    import self::task_runner
+    import self::updater
+    import self::utils
+    import self::version_fetcher
+    import self::workspace
+    import self::diff_engine
+    import self::encoding_engine
+    import self::blame_engine
+    import self::emmet_engine
+    import self::session_engine
+    import self::test_engine
+    import self::ui_actions
+    import self::theme_engine
+    import self::plugin_registry
+    import self::ffi
+  file 742 24580 src/rust_backend/src/lsp/client.rs
+    import crate::framer::LengthPrefixedFramer
+  file 3 44 src/rust_backend/src/lsp/mod.rs
+    import self::client
+  file 704 27910 src/rust_backend/src/plugin_registry.rs
+    import crate::theme_engine
+  file 168 4821 src/rust_backend/src/session_engine.rs
+  file 148 4860 src/rust_backend/src/settings/encrypt.rs
+  file 343 10732 src/rust_backend/src/settings/ffi.rs
+    import crate::settings::keychain
+    import crate::settings::migrations
+    import crate::settings::storage
+  file 574 21225 src/rust_backend/src/settings/keychain.rs
+    import crate::settings::encrypt::EncryptionKey
+  file 435 15337 src/rust_backend/src/settings/migrations.rs
+    import crate::settings::storage::SettingsStorage
+    import crate::settings::keychain::KeyPolicy
+  file 57 2219 src/rust_backend/src/settings/mod.rs
+    import self::encrypt
+    import self::ffi
+    import self::keychain
+    import self::migrations
+    import self::storage
+    import self::types
+  file 656 25278 src/rust_backend/src/settings/storage.rs
+    import crate::settings::encrypt
+    import crate::settings::keychain
+    import crate::settings::types
+    import crate::settings::keychain::KeyPolicy
+  file 118 3177 src/rust_backend/src/settings/types.rs
+  file 301 9422 src/rust_backend/src/task_runner.rs
+  file 340 10282 src/rust_backend/src/test_engine.rs
+  file 536 20469 src/rust_backend/src/theme_engine.rs
+  file 376 13682 src/rust_backend/src/ui_actions.rs
+  file 156 5279 src/rust_backend/src/updater.rs
+  file 74 1681 src/rust_backend/src/utils.rs
+  file 95 2630 src/rust_backend/src/version_fetcher.rs
+  file 230 6418 src/rust_backend/src/workspace.rs
+  file 61 1393 src/themedefs.h
+  file 299 11105 src/themeicons.cpp
+  file 269 9973 src/themeicons.h
+  file 849 39027 src/thememanager.cpp
+  file 181 6611 src/thememanager.h
+  file 3 62 src/version.h.in
+  file 267 7559 src/widgets/bracketcolorizer.cpp
+  file 69 1899 src/widgets/bracketcolorizer.h
+  file 125 4077 src/widgets/breadcrumbbar.cpp
+  file 47 1143 src/widgets/breadcrumbbar.h
+  file 86 2312 src/widgets/codelensmanager.cpp
+  file 69 2011 src/widgets/codelensmanager.h
+  file 162 5192 src/widgets/cssbreadcrumb.cpp
+  file 54 1424 src/widgets/cssbreadcrumb.h
+  file 136 4957 src/widgets/encodingmanager.cpp
+  file 61 1789 src/widgets/encodingmanager.h
+  file 460 12295 src/widgets/foldmanager.cpp
+  file 99 3118 src/widgets/foldmanager.h
+  file 102 2723 src/widgets/gitblame.cpp
+  file 73 1791 src/widgets/gitblame.h
+  file 34 645 src/widgets/multi-cursor.cpp
+  file 29 672 src/widgets/multi-cursor.h
+  file 166 4609 src/widgets/notificationcenter.cpp
+  file 84 2219 src/widgets/notificationcenter.h
+  file 463 16212 src/widgets/refactoringmanager.cpp
+  file 62 2377 src/widgets/refactoringmanager.h
+  file 220 6756 src/widgets/sessionmanager.cpp
+  file 79 2313 src/widgets/sessionmanager.h
+  file 232 8230 src/widgets/shortcuteditor.cpp
+  file 54 1255 src/widgets/shortcuteditor.h
+  file 321 10977 src/widgets/snippeteditordialog.cpp
+  file 66 1588 src/widgets/snippeteditordialog.h
+  file 376 10041 src/widgets/snippetmanager.cpp
+  file 91 2622 src/widgets/snippetmanager.h
+  file 58 1621 src/widgets/splashscreen.h
+  file 89 2262 src/widgets/splitmanager.cpp
+  file 36 895 src/widgets/splitmanager.h
+  file 281 9710 src/widgets/statusbarwidget.cpp
+  file 73 2013 src/widgets/statusbarwidget.h
+  file 139 4082 src/widgets/taskrunnerui.cpp
+  file 50 1237 src/widgets/taskrunnerui.h
+  file 360 12176 src/widgets/universalsearch.cpp
+  file 75 2122 src/widgets/universalsearch.h
+  file 376 13056 src/widgets/welcomemenuscreen.cpp
+  file 67 1733 src/widgets/welcomemenuscreen.h
+  file 174 4206 src/widgets/zenmode.cpp
+  file 78 1878 src/widgets/zenmode.h
+  file 151 4505 src/windowanimator.cpp
+  file 29 694 src/windowanimator.h
+  file 62 2079 tests/CMakeLists.txt
+  file 191 5283 tests/test_bracketcolorizer.cpp
+  file 28 702 tests/test_bracketcolorizer.h
+  file 150 5520 tests/test_codeeditor_multicursor.cpp
+  file 18 485 tests/test_codeeditor_multicursor.h
+  file 177 5705 tests/test_codelensmanager.cpp
+  file 24 612 tests/test_codelensmanager.h
+  file 22 623 tests/test_crashhandler.cpp
+  file 14 207 tests/test_crashhandler.h
+  file 29 894 tests/test_debugconfiguration.cpp
+  file 14 236 tests/test_debugconfiguration.h
+  file 212 6165 tests/test_encodingmanager.cpp
+  file 34 928 tests/test_encodingmanager.h
+  file 282 13899 tests/test_fileicons.cpp
+  file 40 1618 tests/test_fileicons.h
+  file 278 8477 tests/test_foldmanager.cpp
+  file 32 878 tests/test_foldmanager.h
+  file 122 3363 tests/test_gitblame.cpp
+  file 20 413 tests/test_gitblame.h
+  file 79 3313 tests/test_main.cpp
+  file 289 9679 tests/test_mainwindow_editing.cpp
+  file 25 924 tests/test_mainwindow_editing.h
+  file 391 13724 tests/test_mainwindow_panels.cpp
+  file 25 896 tests/test_mainwindow_panels.h
+  file 210 7237 tests/test_mainwindow_sidebar.cpp
+  file 20 671 tests/test_mainwindow_sidebar.h
+  file 110 2531 tests/test_multicursor.cpp
+  file 22 467 tests/test_multicursor.h
+  file 27 632 tests/test_projectsearch.cpp
+  file 15 247 tests/test_projectsearch.h
+  file 38 1023 tests/test_rundialog.cpp
+  file 15 248 tests/test_rundialog.h
+  file 165 4620 tests/test_sessionmanager.cpp
+  file 22 499 tests/test_sessionmanager.h
+  file 268 8071 tests/test_snippetmanager.cpp
+  file 35 940 tests/test_snippetmanager.h
+  file 11 214 tests/test_splitmanager.cpp
+  file 13 187 tests/test_splitmanager.h
+  file 271 7386 tests/test_taskrunnerui.cpp
+  file 22 496 tests/test_taskrunnerui.h
+  file 884 33157 tests/test_terminal.cpp
+  file 72 1959 tests/test_terminal.h
+  file 267 10408 tests/test_themeicons.cpp
+  file 34 1127 tests/test_themeicons.h
+  file 206 8086 tests/test_thememanager.cpp
+  file 17 314 tests/test_thememanager.h
+  file 101 3358 tests/test_ui_action_bridge.cpp
+  file 19 445 tests/test_ui_action_bridge.h
+  file 19 458 tests/test_windowanimator.cpp
+  file 14 227 tests/test_windowanimator.h
+  file 1 4 tests/Testing/Temporary/CTestCostData.txt
+  file 1402 45213 translations/scriptura_en_001.ts
 
 district scriptura
   description A open sourced code editor(proposing to integrate with AI) using Qt/C++ and Rust, no trackers, no big companies, 100% pure IDE
@@ -6477,16 +6807,18 @@ district weather-ext
 district website
   description My personal website — profile, selected work and contact.
   language TypeScript
-  stars 0
+  stars 1
   forks 0
-  size 1779
+  size 1784
   branch main
-  pushed 2026-11-21T20:01:19Z
+  pushed 2026-11-22T10:50:44Z
   fork false
   url https://github.com/jason1015-coder/website
-  files 31
-  lines 3717
+  files 33
+  lines 3768
+  file 15 859 .github/FUNDING.yml
   file 63 1381 .github/workflows/deploy.yml
+  file 36 1225 .github/workflows/notify-tamagotchi.yml
   file 8 85 .gitignore
   file 7 212 deploy.json
   file 19 734 index.html
@@ -6534,7 +6866,7 @@ district website
     import ../components/motion
   file 130 3601 src/data/cityRepos.ts
     import ../app/lib/githubCity
-  file 251 11678 src/data/site.ts
+  file 251 11626 src/data/site.ts
   file 11 236 src/main.tsx
     import ./app/App
     import ./styles.css
