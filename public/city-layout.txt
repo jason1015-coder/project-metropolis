@@ -22,7 +22,7 @@ district audio-pitch-converter
   branch main
   pushed 2026-11-19T19:49:20Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/audio-pitch-converter
+  url https://github.com/jason1015-coder/audio-pitch-converter
   files 9
   lines 1374
   file 15 859 .github/FUNDING.yml
@@ -44,7 +44,7 @@ district docs
   branch main
   pushed 2026-10-04T13:47:10Z
   fork true
-  url https://api.github.com/repos/jason1015-coder/docs
+  url https://github.com/jason1015-coder/docs
   files 180
   lines 22067
   file 62 1962 .github/workflows/archive-whitepapers.yaml
@@ -237,7 +237,7 @@ district jason1015-coder
   branch main
   pushed 2026-11-20T19:41:54Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/jason1015-coder
+  url https://github.com/jason1015-coder/jason1015-coder
   files 5
   lines 440
   file 50 1982 .github/tamagotchi-notifier.yml
@@ -255,7 +255,7 @@ district manager-ext
   branch main
   pushed 2026-11-19T19:49:20Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/manager-ext
+  url https://github.com/jason1015-coder/manager-ext
   files 10
   lines 546
   file 15 937 .github/FUNDING.yml
@@ -278,7 +278,7 @@ district nanocoder
   branch main
   pushed 2026-07-22T15:43:55Z
   fork true
-  url https://api.github.com/repos/jason1015-coder/nanocoder
+  url https://github.com/jason1015-coder/nanocoder
   files 898
   lines 200541
   file 5 465 .changeset/alt-screen-alignment.md
@@ -1189,7 +1189,7 @@ district project-metropolis
   branch main
   pushed 2026-11-22T09:18:08Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/project-metropolis
+  url https://github.com/jason1015-coder/project-metropolis
   files 23
   lines 5853
   file 62 1936 .github/workflows/city-layout.yml
@@ -1225,7 +1225,7 @@ district quick-note-ext
   branch main
   pushed 2026-11-19T19:49:21Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/quick-note-ext
+  url https://github.com/jason1015-coder/quick-note-ext
   files 11
   lines 1141
   file 16 860 .github/FUNDING.yml
@@ -1249,7 +1249,7 @@ district scriptura
   branch main
   pushed 2026-10-28T17:06:52Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/scriptura
+  url https://github.com/jason1015-coder/scriptura
   files 256
   lines 45812
   file 32 708 .github/ISSUE_TEMPLATE/bug_report.md
@@ -1518,7 +1518,7 @@ district up-for-grabs.net
   branch gh-pages
   pushed 2026-08-31T10:58:46Z
   fork true
-  url https://api.github.com/repos/jason1015-coder/up-for-grabs.net
+  url https://github.com/jason1015-coder/up-for-grabs.net
   files 900
   lines 23574
   file 41 790 _config.yml
@@ -2431,7 +2431,7 @@ district weather-ext
   branch main
   pushed 2026-11-19T19:49:20Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/weather-ext
+  url https://github.com/jason1015-coder/weather-ext
   files 9
   lines 1001
   file 15 859 .github/FUNDING.yml
@@ -2453,7 +2453,7 @@ district website
   branch main
   pushed 2026-11-21T20:01:19Z
   fork false
-  url https://api.github.com/repos/jason1015-coder/website
+  url https://github.com/jason1015-coder/website
   files 31
   lines 3717
   file 63 1381 .github/workflows/deploy.yml

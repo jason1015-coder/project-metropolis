@@ -89,6 +89,19 @@ async function api(pathname) {
   return response.json()
 }
 
+/**
+ * GitHub's REST API describes a repository with `url` set to its api.github.com
+ * endpoint. Linking to that from the city only shows an API error, so always
+ * write the human-facing page instead.
+ */
+function webUrl(repo) {
+  if (repo.html_url) return String(repo.html_url)
+  const api = String(repo.url ?? '')
+  const match = api.match(/^https?:\/\/api\.github\.com\/repos\/([^/]+)\/([^/?#]+)\/?$/i)
+  if (match) return `https://github.com/${match[1]}/${match[2]}`
+  return api || `https://github.com/${OWNER}/${repo.name}`
+}
+
 function normalise(repo) {
   return {
     name: repo.name,
@@ -100,7 +113,7 @@ function normalise(repo) {
     branch: repo.branch ?? repo.default_branch ?? 'main',
     pushedAt: repo.pushedAt ?? repo.pushed_at ?? '',
     fork: Boolean(repo.fork),
-    url: repo.url ?? repo.html_url ?? `https://github.com/${OWNER}/${repo.name}`,
+    url: webUrl(repo),
   }
 }
 

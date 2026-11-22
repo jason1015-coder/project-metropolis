@@ -116,14 +116,24 @@ export function languageFor(path: string): Language {
   return LANGUAGES[ext] ?? { label: 'Text', color: '#8d968f' }
 }
 
+/**
+ * The survey reads repositories from GitHub's REST API, whose `url` field points
+ * at api.github.com. A visitor wants the repository's page, so API links (in
+ * layouts written before that was fixed) are rewritten to github.com here.
+ */
+export function webRepoUrl(url: string): string {
+  const api = url.trim().match(/^https?:\/\/api\.github\.com\/repos\/([^/]+)\/([^/?#]+)\/?$/i)
+  return api ? `https://github.com/${api[1]}/${api[2]}` : url.trim()
+}
+
 /** GitHub link for a file, used by the hover card and its neighbour links. */
 export function fileUrl(repo: RepoSummary, path: string): string {
   const encoded = path.split('/').map(encodeURIComponent).join('/')
-  return `${repo.url}/blob/${encodeURIComponent(repo.branch)}/${encoded}`
+  return `${webRepoUrl(repo.url)}/blob/${encodeURIComponent(repo.branch)}/${encoded}`
 }
 
 export function repositoryUrl(repo: RepoSummary): string {
-  return repo.url
+  return webRepoUrl(repo.url)
 }
 
 function layoutUrl(): string {
@@ -250,7 +260,7 @@ export function parseCityLayout(text: string): CityLayout {
         repo.fork = value.trim() === 'true'
         break
       case 'url':
-        repo.url = value.trim() || repo.url
+        repo.url = webRepoUrl(value) || repo.url
         break
       case 'file': {
         const first = value.indexOf(' ')
