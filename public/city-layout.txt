@@ -9,9 +9,9 @@
 #     file <lines> <bytes> <path>  one building per text file
 
 owner jason1015-coder
-updated 2026-11-21T08:44:01Z
-districts 10
-buildings 2301
+updated 2026-11-22T09:18:08Z
+districts 11
+buildings 2332
 
 district audio-pitch-converter
   description a simple chrome extension to convert all pitches to others
@@ -22,7 +22,7 @@ district audio-pitch-converter
   branch main
   pushed 2026-11-19T19:49:20Z
   fork false
-  url https://github.com/jason1015-coder/audio-pitch-converter
+  url https://api.github.com/repos/jason1015-coder/audio-pitch-converter
   files 9
   lines 1374
   file 15 859 .github/FUNDING.yml
@@ -44,7 +44,7 @@ district docs
   branch main
   pushed 2026-10-04T13:47:10Z
   fork true
-  url https://github.com/jason1015-coder/docs
+  url https://api.github.com/repos/jason1015-coder/docs
   files 180
   lines 22067
   file 62 1962 .github/workflows/archive-whitepapers.yaml
@@ -229,7 +229,7 @@ district docs
   file 35 686 tsconfig.json
 
 district jason1015-coder
-  description The profile README, with a tamagotchi living in it.
+  description 
   language JavaScript
   stars 0
   forks 0
@@ -237,7 +237,7 @@ district jason1015-coder
   branch main
   pushed 2026-11-20T19:41:54Z
   fork false
-  url https://github.com/jason1015-coder/jason1015-coder
+  url https://api.github.com/repos/jason1015-coder/jason1015-coder
   files 5
   lines 440
   file 50 1982 .github/tamagotchi-notifier.yml
@@ -247,7 +247,7 @@ district jason1015-coder
   file 53 4439 tamagotchi.svg
 
 district manager-ext
-  description A dashboard for every extension you have installed.
+  description 
   language JavaScript
   stars 1
   forks 0
@@ -255,7 +255,7 @@ district manager-ext
   branch main
   pushed 2026-11-19T19:49:20Z
   fork false
-  url https://github.com/jason1015-coder/manager-ext
+  url https://api.github.com/repos/jason1015-coder/manager-ext
   files 10
   lines 546
   file 15 937 .github/FUNDING.yml
@@ -270,7 +270,7 @@ district manager-ext
   file 46 1887 README.md
 
 district nanocoder
-  description An open coding agent for your terminal, built by a community collective rather than a company.
+  description An open coding agent for your terminal, built by a community collective rather than a company. Bring your own model, keep your code on your machine, and owe nothing to anyone.
   language TypeScript
   stars 0
   forks 0
@@ -278,7 +278,7 @@ district nanocoder
   branch main
   pushed 2026-07-22T15:43:55Z
   fork true
-  url https://github.com/jason1015-coder/nanocoder
+  url https://api.github.com/repos/jason1015-coder/nanocoder
   files 898
   lines 200541
   file 5 465 .changeset/alt-screen-alignment.md
@@ -1180,8 +1180,44 @@ district nanocoder
   file 374 8572 source/wizards/validation.ts
   file 48 917 tsconfig.json
 
+district project-metropolis
+  description my project/work displayed as a city
+  language TypeScript
+  stars 0
+  forks 0
+  size 64
+  branch main
+  pushed 2026-11-22T09:18:08Z
+  fork false
+  url https://api.github.com/repos/jason1015-coder/project-metropolis
+  files 23
+  lines 5853
+  file 62 1936 .github/workflows/city-layout.yml
+  file 63 1285 .github/workflows/deploy.yml
+  file 7 60 .gitignore
+  file 19 759 index.html
+  file 1 647 package.json
+  file 2445 112535 public/city-layout.txt
+  file 12 484 public/favicon.svg
+  file 54 2471 README.md
+  file 310 11089 scripts/survey-city.mjs
+  file 147 5825 src/app/App.tsx
+  file 369 17415 src/app/components/city/CitySection.tsx
+  file 1026 34301 src/app/components/city/scene.ts
+  file 271 9209 src/app/components/city/tamagotchi.ts
+  file 165 5338 src/app/components/city/textures.ts
+  file 72 2777 src/app/components/motion.tsx
+  file 49 1919 src/app/components/Preloader.tsx
+  file 285 8818 src/app/lib/cityData.ts
+  file 314 9618 src/app/lib/cityLayout.ts
+  file 3 124 src/app/lib/cx.ts
+  file 11 236 src/main.tsx
+  file 152 3900 src/styles.css
+  file 1 454 tsconfig.json
+  file 15 522 vite.config.ts
+
 district quick-note-ext
-  description A floating notepad on any website, saved per domain.
+  description 
   language JavaScript
   stars 2
   forks 1
@@ -1189,7 +1225,7 @@ district quick-note-ext
   branch main
   pushed 2026-11-19T19:49:21Z
   fork false
-  url https://github.com/jason1015-coder/quick-note-ext
+  url https://api.github.com/repos/jason1015-coder/quick-note-ext
   files 11
   lines 1141
   file 16 860 .github/FUNDING.yml
@@ -1213,7 +1249,7 @@ district scriptura
   branch main
   pushed 2026-10-28T17:06:52Z
   fork false
-  url https://github.com/jason1015-coder/scriptura
+  url https://api.github.com/repos/jason1015-coder/scriptura
   files 256
   lines 45812
   file 32 708 .github/ISSUE_TEMPLATE/bug_report.md
@@ -1474,7 +1510,7 @@ district scriptura
   file 1402 45213 translations/scriptura_en_001.ts
 
 district up-for-grabs.net
-  description A list of projects with curated tasks for new contributors.
+  description This is a list of projects which have curated tasks specifically for new contributors. These issues are a great way to get started with a project, or to help share the load of working on open source projects. Jump in!
   language JavaScript
   stars 0
   forks 0
@@ -1482,7 +1518,7 @@ district up-for-grabs.net
   branch gh-pages
   pushed 2026-08-31T10:58:46Z
   fork true
-  url https://github.com/jason1015-coder/up-for-grabs.net
+  url https://api.github.com/repos/jason1015-coder/up-for-grabs.net
   files 900
   lines 23574
   file 41 790 _config.yml
@@ -2395,7 +2431,7 @@ district weather-ext
   branch main
   pushed 2026-11-19T19:49:20Z
   fork false
-  url https://github.com/jason1015-coder/weather-ext
+  url https://api.github.com/repos/jason1015-coder/weather-ext
   files 9
   lines 1001
   file 15 859 .github/FUNDING.yml
@@ -2413,31 +2449,39 @@ district website
   language TypeScript
   stars 0
   forks 0
-  size 0
+  size 1779
   branch main
-  pushed 2026-11-21T08:44:01Z
+  pushed 2026-11-21T20:01:19Z
   fork false
-  url https://github.com/jason1015-coder/website
-  files 23
-  lines 1255
+  url https://api.github.com/repos/jason1015-coder/website
+  files 31
+  lines 3717
   file 63 1381 .github/workflows/deploy.yml
   file 8 85 .gitignore
   file 7 212 deploy.json
   file 19 734 index.html
-  file 38 1026 package.json
+  file 38 1083 package.json
   file 6 463 public/favicon.svg
-  file 58 2383 README.md
+  file 58 2988 README.md
   file 17 572 scripts/postbuild.mjs
-  file 59 1790 src/app/App.tsx
+  file 59 1697 src/app/App.tsx
+  file 433 18774 src/app/components/city/CitySection.tsx
+  file 702 23631 src/app/components/city/scene.ts
+  file 279 9662 src/app/components/city/tamagotchi.ts
+  file 145 4865 src/app/components/city/textures.ts
   file 85 4122 src/app/components/Footer.tsx
   file 79 3131 src/app/components/motion.tsx
-  file 69 2472 src/app/components/Nav.tsx
+  file 69 2460 src/app/components/Nav.tsx
   file 53 2037 src/app/components/Preloader.tsx
+  file 190 5822 src/app/lib/cityLayout.ts
   file 3 124 src/app/lib/cx.ts
-  file 169 6910 src/app/pages/Home.tsx
-  file 251 11753 src/data/site.ts
+  file 435 15135 src/app/lib/githubCity.ts
+  file 148 4652 src/app/lib/useGitHubStats.ts
+  file 169 7643 src/app/pages/Home.tsx
+  file 130 3601 src/data/cityRepos.ts
+  file 251 11678 src/data/site.ts
   file 11 236 src/main.tsx
-  file 158 4360 src/styles.css
+  file 158 4204 src/styles.css
   file 25 1106 src/worker/index.ts
   file 30 1089 tests/api.test.ts
   file 22 603 tsconfig.json
