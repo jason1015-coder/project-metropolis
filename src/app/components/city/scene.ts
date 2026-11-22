@@ -72,6 +72,7 @@ interface DistrictNode {
   plot: Plot
   buildings: THREE.Group
   mesh: THREE.InstancedMesh | null
+  detailMesh: THREE.InstancedMesh | null
   data: DistrictData | null
   files: CityFile[]
   layout: Building[]
@@ -216,14 +217,15 @@ export class CityScene {
     }
     node.layout = layoutBuildings(data.files, inner)
 
-    if (node.mesh) {
-      node.buildings.remove(node.mesh)
-      node.mesh.geometry.dispose()
-      ;(node.mesh.material as THREE.Material).dispose()
-      node.mesh = null
-    }
+    this.clearBuildings(node)
 
     if (node.layout.length > 0) {
+      const matrix = new THREE.Matrix4()
+      const quaternion = new THREE.Quaternion()
+      const position = new THREE.Vector3()
+      const scale = new THREE.Vector3()
+      const colour = new THREE.Color()
+
       const geometry = new THREE.BoxGeometry(1, 1, 1)
       geometry.translate(0, 0.5, 0)
       const material = new THREE.MeshStandardMaterial({ roughness: 0.58, metalness: 0.1 })
@@ -232,18 +234,12 @@ export class CityScene {
       mesh.receiveShadow = true
       mesh.userData.node = node
 
-      const matrix = new THREE.Matrix4()
-      const quaternion = new THREE.Quaternion()
-      const position = new THREE.Vector3()
-      const scale = new THREE.Vector3()
-      const colour = new THREE.Color()
-
       node.layout.forEach((building, index) => {
         position.set(building.x, 0, building.z)
         scale.set(building.w, building.h, building.d)
         matrix.compose(position, quaternion, scale)
         mesh.setMatrixAt(index, matrix)
-        mesh.setColorAt(index, colour.set(building.color))
+        mesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade))
       })
       mesh.instanceMatrix.needsUpdate = true
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
@@ -251,6 +247,34 @@ export class CityScene {
 
       node.mesh = mesh
       node.buildings.add(mesh)
+
+      // Roof massing per file: setbacks, masts and plant boxes are one more
+      // instanced pass, so a block full of varied silhouettes stays cheap.
+      const detailed = node.layout.filter((building) => building.detail !== null)
+      if (detailed.length > 0) {
+        const detailGeometry = new THREE.BoxGeometry(1, 1, 1)
+        detailGeometry.translate(0, 0.5, 0)
+        const detailMaterial = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.16 })
+        const detailMesh = new THREE.InstancedMesh(detailGeometry, detailMaterial, detailed.length)
+        detailMesh.castShadow = true
+
+        detailed.forEach((building, index) => {
+          const detail = building.detail
+          if (!detail) return
+          position.set(building.x + detail.dx, building.h, building.z + detail.dz)
+          scale.set(detail.w, detail.h, detail.d)
+          matrix.compose(position, quaternion, scale)
+          detailMesh.setMatrixAt(index, matrix)
+          detailMesh.setColorAt(index, colour.set(building.color).offsetHSL(0, 0, building.shade + 0.06))
+        })
+        detailMesh.instanceMatrix.needsUpdate = true
+        if (detailMesh.instanceColor) detailMesh.instanceColor.needsUpdate = true
+        detailMesh.computeBoundingSphere()
+
+        node.detailMesh = detailMesh
+        node.buildings.add(detailMesh)
+      }
+
       if (firstBuild) {
         node.buildings.scale.y = this.reducedMotion ? 1 : 0.001
         node.appear = this.reducedMotion ? 1 : 0
@@ -259,6 +283,17 @@ export class CityScene {
 
     this.renderer.shadowMap.needsUpdate = true
     this.emitStats()
+  }
+
+  private clearBuildings(node: DistrictNode): void {
+    for (const object of [node.mesh, node.detailMesh]) {
+      if (!object) continue
+      node.buildings.remove(object)
+      object.geometry.dispose()
+      ;(object.material as THREE.Material).dispose()
+    }
+    node.mesh = null
+    node.detailMesh = null
   }
 
   setPet(state: { mood: PetMood; headline: string; detail: string; progress: number }): void {
@@ -446,6 +481,7 @@ export class CityScene {
       plot,
       buildings,
       mesh: null,
+      detailMesh: null,
       data: null,
       files: [],
       layout: [],

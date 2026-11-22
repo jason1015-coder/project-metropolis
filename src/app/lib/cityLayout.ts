@@ -17,6 +17,18 @@ export interface Plot {
   index: number
 }
 
+export type DetailKind = 'setback' | 'spire' | 'tank'
+
+/** The extra mass on a roof that gives a building its silhouette. */
+export interface BuildingDetail {
+  kind: DetailKind
+  w: number
+  d: number
+  h: number
+  dx: number
+  dz: number
+}
+
 export interface Building {
   file: CityFile
   x: number
@@ -25,6 +37,11 @@ export interface Building {
   d: number
   h: number
   color: string
+  /** Style seed for this file: the same file always builds the same way. */
+  seed: number
+  /** Small lightness shift so neighbouring facades are not identical. */
+  shade: number
+  detail: BuildingDetail | null
 }
 
 /** The city footprint, in world units, centred on the origin. */
@@ -33,7 +50,8 @@ export const CITY_BOUNDS: Rect = { x: 0, z: 0, w: 34, d: 23 }
 /** The width of the streets that run between the blocks. */
 export const ROAD_WIDTH = 1.35
 
-const WALKWAY = 0.55
+/** Pavement between a building and the kerb: buildings front straight onto the streets. */
+const FRONTAGE = 0.14
 /** Lines of code that reach full height. Bigger files are clamped, not scaled. */
 const TALLEST_LINES = 1600
 const MAX_HEIGHT = 4.4
@@ -164,7 +182,7 @@ function weightOf(repo: RepoSummary): number {
 
 export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
   if (files.length === 0) return []
-  const area = shrink(district, WALKWAY)
+  const area = shrink(district, FRONTAGE)
   if (area.w <= 0 || area.d <= 0) return []
 
   const aspect = area.w / area.d
@@ -172,36 +190,112 @@ export function layoutBuildings(files: CityFile[], district: Rect): Building[] {
   const rows = Math.ceil(files.length / cols)
   const cellW = area.w / cols
   const cellD = area.d / rows
-  const cell = Math.min(cellW, cellD)
 
-  const cells: { x: number; z: number }[] = []
+  // Street frontage first: a block lines its own roads before the middle of the
+  // block is filled in, so every district meets the streets with buildings.
+  const cells: { x: number; z: number; edge: number }[] = []
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
       cells.push({
         x: area.x - area.w / 2 + cellW * (col + 0.5),
         z: area.z - area.d / 2 + cellD * (row + 0.5),
+        edge: Math.min(col, cols - 1 - col, row, rows - 1 - row),
       })
     }
   }
+  cells.sort((a, b) => a.edge - b.edge)
 
-  // Fill the block edge to edge rather than clustering the tallest towers in
-  // the middle, so neighbouring blocks read as one continuous city.
   const ordered = [...files].sort((a, b) => b.lines - a.lines || b.bytes - a.bytes)
-  const biggest = Math.max(1, ...files.map((file) => file.bytes))
 
   return ordered.slice(0, cells.length).map((file, index) => {
-    const cellCentre = cells[index]
-    const footprint = Math.min(MAX_FOOTPRINT, Math.max(0.18, cell * (0.62 + 0.3 * Math.sqrt(file.bytes / biggest))))
+    const plot = cells[index]
+    // Style is hashed from the file path, so it survives reloads and deploys.
+    const seed = hashPath(file.path)
+    const height = heightFor(file.lines) * (0.82 + unit(seed, 1) * 0.46)
+
+    // Towers keep a little air around them; low-rise buildings fill their plot
+    // so the streets read as an unbroken wall of facades.
+    const tall = height / (0.4 + MAX_HEIGHT)
+    const fill = 0.95 - 0.34 * tall * unit(seed, 2)
+    const w = clamp(cellW * fill * (0.86 + unit(seed, 3) * 0.14), 0.14, MAX_FOOTPRINT)
+    const d = clamp(cellD * fill * (0.86 + unit(seed, 4) * 0.14), 0.14, MAX_FOOTPRINT)
+
     return {
       file,
-      x: cellCentre.x,
-      z: cellCentre.z,
-      w: footprint,
-      d: footprint,
-      h: heightFor(file.lines),
+      x: plot.x,
+      z: plot.z,
+      w,
+      d,
+      h: height,
       color: file.color,
+      seed,
+      shade: -0.07 + unit(seed, 5) * 0.14,
+      detail: detailFor(seed, w, d, height),
     }
   })
+}
+
+/** Roof massing: a stepped setback, a mast, or a plant box on one corner. */
+function detailFor(seed: number, w: number, d: number, h: number): BuildingDetail | null {
+  const pick = unit(seed, 6)
+  if (pick < 0.42) return null
+
+  if (pick < 0.66) {
+    return {
+      kind: 'setback',
+      w: w * (0.5 + unit(seed, 7) * 0.2),
+      d: d * (0.5 + unit(seed, 7) * 0.2),
+      h: Math.max(0.12, h * (0.1 + unit(seed, 8) * 0.1)),
+      dx: 0,
+      dz: 0,
+    }
+  }
+
+  if (pick < 0.85) {
+    return {
+      kind: 'spire',
+      w: Math.min(0.16, w * 0.3),
+      d: Math.min(0.16, d * 0.3),
+      h: Math.max(0.3, h * (0.22 + unit(seed, 9) * 0.25)),
+      dx: 0,
+      dz: 0,
+    }
+  }
+
+  const size = Math.min(w, d) * 0.44
+  return {
+    kind: 'tank',
+    w: size,
+    d: size,
+    h: Math.max(0.1, h * 0.09),
+    dx: (w / 2 - size / 2 - 0.03) * (unit(seed, 10) > 0.5 ? 1 : -1),
+    dz: (d / 2 - size / 2 - 0.03) * (unit(seed, 11) > 0.5 ? 1 : -1),
+  }
+}
+
+/** Stable FNV-1a hash: the same file path always yields the same style. */
+function hashPath(path: string): number {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < path.length; index += 1) {
+    hash ^= path.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return hash >>> 0
+}
+
+/** Deterministic 0..1 value for one (file, salt) pair. */
+function unit(seed: number, salt: number): number {
+  let value = (seed ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0
+  value ^= value >>> 15
+  value = Math.imul(value, 0x2c1b3c6d) >>> 0
+  value ^= value >>> 12
+  value = Math.imul(value, 0x297a2d39) >>> 0
+  value ^= value >>> 15
+  return (value >>> 0) / 4294967296
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
 }
 
 export function heightFor(lines: number): number {
