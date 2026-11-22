@@ -127,7 +127,13 @@ export function CitySection() {
   const cardWidth = Math.min(320, Math.max(210, (stage?.clientWidth ?? 320) - 24))
   const maxLeft = Math.max(8, (stage?.clientWidth ?? 0) - cardWidth - 8)
   const cardLeft = Math.min(layerX + (hover?.x ?? 0) + 18, maxLeft)
-  const flipY = Boolean(hover && hover.y + 380 > viewHeight)
+  // The card carries a whole line map now, so it can be taller than the stage:
+  // open it on the side with more room and cap its height, scrolling the rest
+  // instead of letting the stage clip it.
+  const roomBelow = Math.max(0, viewHeight - (hover?.y ?? 0) - 30)
+  const roomAbove = Math.max(0, (hover?.y ?? 0) - 30)
+  const flipY = Boolean(hover && roomBelow < 460 && roomAbove > roomBelow)
+  const cardMaxHeight = Math.max(220, Math.min(560, flipY ? roomAbove : roomBelow))
 
   return (
     <section id="city" className="relative scroll-mt-20 pt-24 sm:pt-28">
@@ -144,8 +150,9 @@ export function CitySection() {
             One continuous city: every repository is a district, its biggest files become its buildings, and the streets run between them.
             Height is lines of code, footprint is file size, and a scheduled GitHub Action surveys every repository on the
             account to write {LAYOUT_FILE}. Districts are mapped by glowing floating boundaries, not by plinths. Drag to
-            walk the streets (WASD, Shift to hurry), hold ⌘ or Ctrl and scroll to lean in, and hover a building to follow
-            its links — the same file name, the same type, the same district.
+            walk the streets (WASD, Shift to hurry), hold ⌘ or Ctrl and scroll to lean in, and hover a building to light up its
+            line map: imports in green, importers in pink, the same type in cyan, the same name in amber, and the rest of its
+            district in violet, each one a link to the file on GitHub.
           </p>
           <dl className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4 lg:gap-x-10">
             {[
@@ -228,11 +235,12 @@ export function CitySection() {
           <div
             onPointerEnter={() => sceneRef.current?.pinHover(true)}
             onPointerLeave={() => sceneRef.current?.pinHover(false)}
-            className="absolute z-20 w-[min(320px,calc(100%-24px))] rounded-[14px] border border-line-strong bg-bg/92 p-3.5 shadow-[0_18px_40px_-16px_rgb(0_0_0/0.85)] backdrop-blur-md"
+            className="absolute z-20 w-[min(320px,calc(100%-24px))] overflow-y-auto overscroll-contain rounded-[14px] border border-line-strong bg-bg/92 p-3.5 shadow-[0_18px_40px_-16px_rgb(0_0_0/0.85)] backdrop-blur-md"
             style={{
               left: cardLeft,
               top: flipY ? undefined : layerY + hover.y + 16,
               bottom: flipY ? (stage?.clientHeight ?? 0) - layerY - hover.y + 16 : undefined,
+              maxHeight: cardMaxHeight,
             }}
           >
             {hover.payload.kind === 'file' ? (
@@ -260,9 +268,16 @@ export function CitySection() {
 
                 {hover.payload.links && hover.payload.links.length > 0 && (
                   <div className="mt-3 space-y-2.5 border-t border-line pt-3">
+                    <p className="mono text-[9px] uppercase tracking-[0.14em] text-faint">line map</p>
                     {hover.payload.links.map((group) => (
                       <div key={group.kind}>
-                        <p className="mono text-[9px] uppercase tracking-[0.14em] text-faint">{group.label}</p>
+                        <p className="mono flex items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-muted">
+                          <span className="round size-1.5 shrink-0 rounded-full" style={{ background: group.color }} />
+                          {group.label}
+                          <span className="text-faint">
+                            {group.shown < group.total ? `${group.shown}/${group.total}` : group.total}
+                          </span>
+                        </p>
                         <ul className="mt-1 space-y-0.5">
                           {group.links.map((link) => (
                             <li key={link.url}>

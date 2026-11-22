@@ -28,6 +28,8 @@ export interface CityFile {
   bytes: number
   language: string
   color: string
+  /** In-repo import specifiers the survey found in this file's source. */
+  imports: string[]
 }
 
 export interface DistrictData {
@@ -172,6 +174,10 @@ export async function loadCityLayout(signal?: AbortSignal): Promise<CityLayout> 
  *     stars / forks / size / branch / pushed / fork / url
  *     files <count> / lines <count>
  *     file <lines> <bytes> <path>
+ *       import <specifier>
+ *
+ * The optional `import` lines under a file are what the line map draws: each one
+ * is a relationship between two buildings in the same district.
  */
 export function parseCityLayout(text: string): CityLayout {
   const districts: DistrictData[] = []
@@ -179,6 +185,7 @@ export function parseCityLayout(text: string): CityLayout {
   let owner = CITY_OWNER
   let updatedAt = ''
   let pending: { repo: RepoSummary; files: CityFile[] } | null = null
+  let currentFile: CityFile | null = null
 
   const flush = () => {
     if (!pending) return
@@ -207,6 +214,7 @@ export function parseCityLayout(text: string): CityLayout {
 
     if (key === 'district') {
       flush()
+      currentFile = null
       const name = value.trim()
       if (!name) continue
       pending = {
@@ -270,15 +278,21 @@ export function parseCityLayout(text: string): CityLayout {
         const path = value.slice(second + 1).trim()
         if (!path) break
         const language = languageFor(path)
-        pending.files.push({
+        const file: CityFile = {
           path,
           lines: Number.parseInt(value.slice(0, first), 10) || 0,
           bytes: Number.parseInt(value.slice(first + 1, second), 10) || 0,
           language: language.label,
           color: language.color,
-        })
+          imports: [],
+        }
+        currentFile = file
+        pending.files.push(file)
         break
       }
+      case 'import':
+        if (currentFile && value.trim()) currentFile.imports.push(value.trim())
+        break
       default:
         break
     }

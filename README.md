@@ -8,7 +8,7 @@ Every repository is a district in one continuous city and every text file in it 
 
 - **One continuous model**: a single paved ground, one road grid and one instanced mesh holding every building in the city
 - **Glowing district boundaries**: the city is unmarked until you hover a building, then its repository's floating outline and name light up in that district's colour
-- **File links on hover**: a hovered building names its neighbours — same file name elsewhere, other files of the same type, and the rest of its own district — each one a link to the file on GitHub
+- **Line map on hover**: hovering a building draws colour-coded 3D arcs to everything it relates to — the files it imports (green), the files that import it (pink), other files of the same type (cyan), files with the same name (amber) and the rest of its own district (violet) — and the hover card lists them as links to the file on GitHub
 - **Surveyed in CI**: repositories are surveyed by a GitHub Action, not by each visitor's browser
 - **Performance optimized**: instanced rendering for buildings and roads
 - **Interactive**: WASD to walk the city (Shift to hurry), drag to rotate, ⌘/Ctrl + scroll to zoom, double-click to recentre, hover to inspect
@@ -26,7 +26,10 @@ district <name>
   files <count>
   lines <count>
   file <lines> <bytes> <path>
+    import <specifier>       # in-repo imports, one per line: the line map's edges
 ```
+
+The survey reads every file's source anyway to count its lines, so it also records the relative imports it finds (JavaScript/TypeScript, CSS, Python and Rust). Those become the green and pink arcs in the city.
 
 ## Development
 

@@ -201,6 +201,46 @@ async function readText(repo, path) {
   return null
 }
 
+/** Only in-repo imports become city edges: packages have no building. */
+const RELATIVE_IMPORT = /^(\.{1,2}\/|\/|@\/|~\/)/
+
+const SCRIPT_FILE = /\.[cm]?[jt]sx?$|\.(svelte|vue|astro)$/i
+const STYLE_FILE = /\.(css|scss|sass|less|styl)$/i
+
+/**
+ * Read the import statements out of a file the survey already downloaded, so the
+ * city can draw which buildings depend on which. Nothing extra is fetched.
+ */
+function extractImports(path, text) {
+  if (!text || text.length > MAX_FILE_BYTES) return []
+  const found = new Set()
+  const take = (specifier) => {
+    if (!specifier) return
+    const spec = specifier.trim().replace(/[?#].*$/, '')
+    if (spec && RELATIVE_IMPORT.test(spec)) found.add(spec)
+  }
+
+  if (SCRIPT_FILE.test(path)) {
+    for (const match of text.matchAll(/\bfrom\s*['"]([^'"]+)['"]/g)) take(match[1])
+    for (const match of text.matchAll(/\b(?:import|require)\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) take(match[1])
+    for (const match of text.matchAll(/^\s*import\s+['"]([^'"]+)['"]/gm)) take(match[1])
+  } else if (STYLE_FILE.test(path)) {
+    for (const match of text.matchAll(/@(?:import|use|forward)\s+(?:url\()?['"]([^'"]+)['"]/g)) take(match[1])
+  } else if (/\.py$/i.test(path)) {
+    // Python relative imports: `from .utils import x`, `from ..lib import y`.
+    for (const match of text.matchAll(/^\s*from\s+(\.+[\w.]*)\s+import\b/gm)) take(match[1])
+  } else if (/\.rs$/i.test(path)) {
+    for (const match of text.matchAll(/^\s*use\s+((?:crate|self|super)(?:::\w+)+)/gm)) {
+      found.add(match[1])
+    }
+    for (const match of text.matchAll(/^\s*(?:pub\s+)?mod\s+(\w+)\s*;/gm)) {
+      found.add(`self::${match[1]}`)
+    }
+  }
+
+  return [...found].slice(0, 40)
+}
+
 function countLines(text) {
   if (!text) return 0
   let lines = 1
@@ -245,7 +285,12 @@ async function surveyRepo(repo) {
   await mapLimit(candidates, CONCURRENCY, async (entry) => {
     const text = await readText(repo, entry.path)
     if (text === null || text.includes('\u0000')) return null
-    files.push({ path: entry.path, lines: countLines(text), bytes: entry.size || text.length })
+    files.push({
+      path: entry.path,
+      lines: countLines(text),
+      bytes: entry.size || text.length,
+      imports: extractImports(entry.path, text),
+    })
     return true
   })
 
@@ -271,6 +316,7 @@ function render(surveyed) {
     '#   district <name>                one district per repository',
     '#     <key> <value>                repository metadata',
     '#     file <lines> <bytes> <path>  one building per text file',
+    '#       import <specifier>          a relative import, drawn as a city line',
     '',
     `owner ${OWNER}`,
     `updated ${updated || new Date().toISOString()}`,
@@ -294,7 +340,10 @@ function render(surveyed) {
     lines.push(`  url ${repo.url}`)
     lines.push(`  files ${files.length}`)
     lines.push(`  lines ${totalLines}`)
-    for (const file of files) lines.push(`  file ${file.lines} ${file.bytes} ${file.path}`)
+    for (const file of files) {
+      lines.push(`  file ${file.lines} ${file.bytes} ${file.path}`)
+      for (const specifier of file.imports ?? []) lines.push(`    import ${specifier}`)
+    }
   }
 
   return `${lines.join('\n')}\n`

@@ -23,6 +23,7 @@ import {
   type DistrictData,
   type RepoSummary,
 } from '../../lib/cityData'
+import { basename, dirnameOf, extensionOf, resolveImport } from '../../lib/fileLinks'
 import { createTamagotchi, type PetMood, type Tamagotchi } from './tamagotchi'
 import { makeContactShadow, makeDistrictLabel, makeGlowTexture } from './textures'
 
@@ -39,17 +40,49 @@ const ZOOM_MAX = 68
 /** District light colours: the glow that maps a district's floating boundary. */
 const ACCENTS = ['#63b3ff', '#7fe3c4', '#ffcf7a', '#c9a7ff', '#ff9d7a', '#9fb7ff', '#8ef0dd']
 
+/**
+ * The line map: one colour per kind of relationship, so a hovered building's
+ * connections to the rest of the metropolis read at a glance.
+ */
+const RELATIONS: Record<RelationKind, { label: string; color: string }> = {
+  uses: { label: 'imports', color: '#7dffb0' },
+  usedBy: { label: 'used by', color: '#ff8fb1' },
+  type: { label: 'same type', color: '#6ee7ff' },
+  name: { label: 'same name', color: '#ffe066' },
+  district: { label: 'same district', color: '#b79bff' },
+}
+
+/** How many lines one relationship draws: enough to read, not enough to fog the city. */
+const LINK_LIMIT = 64
+
 export interface FileLink {
   label: string
   meta: string
   url: string
 }
 
-/** Files related to the hovered one: same name, same type, same district. */
+/** Files related to the hovered one, each with the colour of its lines in the city. */
+export type RelationKind = 'uses' | 'usedBy' | 'type' | 'name' | 'district'
+
 export interface LinkGroup {
-  kind: 'name' | 'type' | 'district'
+  kind: RelationKind
   label: string
+  /** The colour this relationship's lines are drawn in. */
+  color: string
+  /** Files with this relationship, and how many of them the map draws. */
+  total: number
+  shown: number
   links: FileLink[]
+}
+
+/** One arm of the line map before it is turned into hover-card links. */
+interface RelationGroup {
+  kind: RelationKind
+  label: string
+  color: string
+  total: number
+  shown: number
+  entries: FileEntry[]
 }
 
 export interface HoverPayload {
@@ -101,6 +134,8 @@ interface DistrictNode {
   plot: Plot
   data: DistrictData | null
   files: CityFile[]
+  /** Every surveyed file in this district, by path, for resolving imports. */
+  byPath: Map<string, CityFile>
   layout: Building[]
   /** The little roads between this district's buildings. */
   lanes: Rect[]
@@ -132,6 +167,14 @@ export class CityScene {
   private readonly roadMeshes: THREE.Mesh[] = []
   private readonly byName = new Map<string, FileEntry[]>()
   private readonly byExtension = new Map<string, FileEntry[]>()
+  /** Importers of each file, keyed by `repo:path`: the "used by" half of the map. */
+  private readonly byImporter = new Map<string, FileEntry[]>()
+  /** Every modelled building, so a relationship can find its exact rooftop. */
+  private readonly buildings = new Map<string, CityBuilding>()
+  private readonly linkGroup = new THREE.Group()
+  private readonly linkLayers: { lines: THREE.LineSegments; points: THREE.Points }[] = []
+  private linkFade = 0
+  private linkTarget = 0
   private roadMarks: THREE.InstancedMesh | null = null
   private roadCount = 0
   private buildingMesh: THREE.InstancedMesh | null = null
@@ -199,6 +242,11 @@ export class CityScene {
     this.pet.group.position.copy(PET_POSITION)
     this.scene.add(this.pet.group)
 
+    // The line map floats over the city, so a hovered building's relationships
+    // stay legible even when the arcs pass behind taller towers.
+    this.linkGroup.visible = false
+    this.scene.add(this.linkGroup)
+
     this.observer = new ResizeObserver(() => this.resize())
     this.observer.observe(container)
     this.resize()
@@ -249,6 +297,7 @@ export class CityScene {
     this.detach()
     this.observer.disconnect()
     this.pet.dispose()
+    this.disposeLinks()
     this.scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) {
         object.geometry.dispose()
@@ -350,6 +399,10 @@ export class CityScene {
     this.hoverKey = ''
     this.byName.clear()
     this.byExtension.clear()
+    this.byImporter.clear()
+    this.buildings.clear()
+    this.linkTarget = 0
+    this.disposeLinks()
 
     for (const mesh of this.roadMeshes) {
       mesh.geometry.dispose()
@@ -479,6 +532,7 @@ export class CityScene {
       plot,
       data: null,
       files: [],
+      byPath: new Map(),
       layout: [],
       lanes: [],
       label,
@@ -502,6 +556,7 @@ export class CityScene {
 
     node.data = data
     node.files = data.files
+    node.byPath = new Map(data.files.map((file) => [file.path, file]))
     node.layout = layoutBuildings(data.files, node.plot.rect)
     node.lanes = layoutLanes(data.files, node.plot.rect)
 
@@ -560,6 +615,8 @@ export class CityScene {
 
     this.buildingMesh = mesh
     this.pickList = entries
+    this.buildings.clear()
+    for (const entry of entries) this.buildings.set(linkKey(entry.node, entry.file), entry)
     this.scene.add(mesh)
 
     // Roof massing per file: setbacks, masts and plant boxes are one more
@@ -647,15 +704,30 @@ export class CityScene {
     this.pickList = []
   }
 
-  /** Index every file by name and by type, so hovering can offer neighbours. */
+  /**
+   * Index every file by name and by type, and every import by the building it
+   * points at, so hovering can map the whole neighbourhood around one file.
+   */
   private buildLinkIndex(): void {
     this.byName.clear()
     this.byExtension.clear()
+    this.byImporter.clear()
     for (const node of this.nodes.values()) {
       for (const file of node.files) {
         const entry: FileEntry = { node, file }
         push(this.byName, basename(file.path), entry)
         push(this.byExtension, extensionOf(file.path), entry)
+
+        const seen = new Set<string>()
+        for (const specifier of file.imports) {
+          const target = resolveImport(file.path, specifier, (path) => node.byPath.has(path))
+          if (!target || target === file.path) continue
+          const key = `${node.repo.name}:${target}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          // `used by` is the same edges read backwards.
+          push(this.byImporter, key, entry)
+        }
       }
     }
   }
@@ -835,6 +907,7 @@ export class CityScene {
 
   private clearHover(): void {
     this.highlight.visible = false
+    this.clearLinks()
     this.hovered = null
     this.hoveredFile = null
     if (this.hoverKey !== '') {
@@ -888,14 +961,19 @@ export class CityScene {
 
     if (key === this.hoverKey) return
     this.hoverKey = key
+
+    const relations = file ? this.fileRelations(node, file) : []
+    if (file) this.drawLinks(node, file, relations)
+    else this.clearLinks()
+
     this.callbacks.onHover({
-      payload: file ? this.filePayload(node, file) : this.repoPayload(node),
+      payload: file ? this.filePayload(node, file, relations) : this.repoPayload(node),
       x: this.pointerPx.x,
       y: this.pointerPx.y,
     })
   }
 
-  private filePayload(node: DistrictNode, file: CityFile): HoverPayload {
+  private filePayload(node: DistrictNode, file: CityFile, relations: RelationGroup[]): HoverPayload {
     return {
       kind: 'file',
       title: file.path,
@@ -906,51 +984,168 @@ export class CityScene {
       color: file.color,
       url: fileUrl(node.repo, file.path),
       hint: 'open the file on github',
-      links: this.fileLinks(node, file),
+      links: this.relationLinks(node, relations),
     }
   }
 
   /**
-   * Neighbours of the hovered file: the same file name elsewhere, other files of
-   * the same type, and the rest of its own district. Every one is a link.
+   * Everything the line map can say about one file: what it imports, what
+   * imports it, other files of the same type, files with the same name, and the
+   * rest of its own district. Each group keeps its full size for the hover card,
+   * while the map itself draws a capped set so the city stays readable.
    */
-  private fileLinks(node: DistrictNode, file: CityFile): LinkGroup[] {
-    const groups: LinkGroup[] = []
-    const used = new Set([linkKey(node, file)])
+  private fileRelations(node: DistrictNode, file: CityFile): RelationGroup[] {
+    const groups: RelationGroup[] = []
+    const self = linkKey(node, file)
 
-    const take = (
-      kind: LinkGroup['kind'],
-      label: string,
-      entries: FileEntry[],
-      limit: number,
-      metaOf: (entry: FileEntry) => string,
-    ) => {
-      const links: FileLink[] = []
+    const add = (kind: RelationKind, entries: FileEntry[]) => {
+      const seen = new Set<string>([self])
+      const unique: FileEntry[] = []
       for (const entry of entries) {
         const key = linkKey(entry.node, entry.file)
-        if (used.has(key)) continue
-        used.add(key)
-        links.push({
-          label: entry.file.path,
-          meta: metaOf(entry),
-          url: fileUrl(entry.node.repo, entry.file.path),
-        })
-        if (links.length >= limit) break
+        if (seen.has(key)) continue
+        seen.add(key)
+        unique.push(entry)
       }
-      if (links.length > 0) groups.push({ kind, label, links })
+      if (unique.length === 0) return
+      const style = RELATIONS[kind]
+      groups.push({
+        kind,
+        label: style.label,
+        color: style.color,
+        total: unique.length,
+        shown: Math.min(unique.length, LINK_LIMIT),
+        entries: unique.slice(0, LINK_LIMIT),
+      })
     }
 
-    const elsewhereFirst = (entries: FileEntry[]) =>
-      [...entries].sort(
-        (a, b) =>
-          Number(a.node === node) - Number(b.node === node) || a.file.path.localeCompare(b.file.path),
-      )
+    const imported: FileEntry[] = []
+    for (const specifier of file.imports) {
+      const target = resolveImport(file.path, specifier, (path) => node.byPath.has(path))
+      if (!target) continue
+      const targetFile = node.byPath.get(target)
+      if (targetFile && targetFile.path !== file.path) imported.push({ node, file: targetFile })
+    }
 
-    take('name', 'same name', elsewhereFirst(this.byName.get(basename(file.path)) ?? []), 3, (entry) => entry.node.repo.name)
-    take('type', 'same type', elsewhereFirst(this.byExtension.get(extensionOf(file.path)) ?? []), 3, (entry) => entry.node.repo.name)
-    take('district', 'same district', siblings(node, file), 3, (entry) => dirnameOf(entry.file.path))
+    add('uses', imported)
+    add('usedBy', this.byImporter.get(self) ?? [])
+    add('type', elsewhereFirst(node, this.byExtension.get(extensionOf(file.path)) ?? []))
+    add('name', elsewhereFirst(node, this.byName.get(basename(file.path)) ?? []))
+    add('district', siblings(node, file))
 
     return groups
+  }
+
+  /** The first few links of each arm, so the hover card can list them. */
+  private relationLinks(node: DistrictNode, groups: RelationGroup[]): LinkGroup[] {
+    return groups.map((group) => ({
+      kind: group.kind,
+      label: group.label,
+      color: group.color,
+      total: group.total,
+      shown: group.shown,
+      links: group.entries.slice(0, 3).map((entry) => ({
+        label: entry.file.path,
+        meta: entry.node === node ? dirnameOf(entry.file.path) || '.' : entry.node.repo.name,
+        url: fileUrl(entry.node.repo, entry.file.path),
+      })),
+    }))
+  }
+
+  /**
+   * Draw one arc from the hovered rooftop to every building it relates to, one
+   * colour per kind of relationship. The whole map fades in with the highlight.
+   */
+  private drawLinks(node: DistrictNode, file: CityFile, groups: RelationGroup[]): void {
+    const source = this.buildings.get(linkKey(node, file))
+    if (!source || groups.length === 0) {
+      this.linkTarget = 0
+      return
+    }
+
+    this.disposeLinks()
+    const rise = this.buildingMesh?.scale.y ?? 1
+    const from = new THREE.Vector3(
+      source.building.x,
+      BUILDING_BASE + source.building.h * rise + 0.04,
+      source.building.z,
+    )
+
+    for (const group of groups) {
+      const arcs: number[] = []
+      const markers: number[] = []
+
+      for (const entry of group.entries) {
+        const target = this.buildings.get(linkKey(entry.node, entry.file))
+        if (!target) continue
+        const to = new THREE.Vector3(
+          target.building.x,
+          BUILDING_BASE + target.building.h * rise + 0.04,
+          target.building.z,
+        )
+        arcInto(from, to, arcs)
+        markers.push(to.x, to.y, to.z)
+      }
+      if (arcs.length === 0) continue
+
+      const lineGeometry = new THREE.BufferGeometry()
+      lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(arcs, 3))
+      const lines = new THREE.LineSegments(
+        lineGeometry,
+        new THREE.LineBasicMaterial({
+          color: group.color,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      )
+      lines.renderOrder = 4
+      lines.frustumCulled = false
+
+      const markerGeometry = new THREE.BufferGeometry()
+      markerGeometry.setAttribute('position', new THREE.Float32BufferAttribute(markers, 3))
+      const points = new THREE.Points(
+        markerGeometry,
+        new THREE.PointsMaterial({
+          color: group.color,
+          size: 0.24,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          depthTest: false,
+          sizeAttenuation: true,
+          toneMapped: false,
+        }),
+      )
+      points.renderOrder = 5
+
+      this.linkGroup.add(lines, points)
+      this.linkLayers.push({ lines, points })
+    }
+
+    this.linkTarget = this.linkLayers.length > 0 ? 1 : 0
+  }
+
+  /** Fade the line map out; the arcs stay until the fade has finished. */
+  private clearLinks(): void {
+    this.linkTarget = 0
+  }
+
+  private disposeLinks(): void {
+    for (const layer of this.linkLayers) {
+      layer.lines.removeFromParent()
+      layer.lines.geometry.dispose()
+      ;(layer.lines.material as THREE.Material).dispose()
+      layer.points.removeFromParent()
+      layer.points.geometry.dispose()
+      ;(layer.points.material as THREE.Material).dispose()
+    }
+    this.linkLayers.length = 0
+    this.linkGroup.visible = false
   }
 
   private repoPayload(node: DistrictNode): HoverPayload {
@@ -1047,6 +1242,18 @@ export class CityScene {
         node.boundaryBase + (this.reducedMotion ? 0 : Math.sin(elapsed * 0.7 + node.phase) * 0.04)
     }
 
+    // The line map fades with the highlight: in on hover, out when the pointer
+    // leaves the building or moves on to the street.
+    this.linkFade += (this.linkTarget - this.linkFade) * Math.min(1, delta * 9)
+    if (this.linkLayers.length > 0) {
+      this.linkGroup.visible = this.linkFade > 0.01
+      for (const layer of this.linkLayers) {
+        ;(layer.lines.material as THREE.LineBasicMaterial).opacity = 0.72 * this.linkFade
+        ;(layer.points.material as THREE.PointsMaterial).opacity = Math.min(1, this.linkFade * 1.2)
+      }
+      if (this.linkFade < 0.01 && this.linkTarget === 0) this.disposeLinks()
+    }
+
     this.pet.update(elapsed, this.camera)
 
     this.frame += 1
@@ -1114,19 +1321,39 @@ function linkKey(node: DistrictNode, file: CityFile): string {
   return `${node.repo.name}:${file.path}`
 }
 
-function basename(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1)
+/** Files of other districts first: the far reach is what makes the map a map. */
+function elsewhereFirst(node: DistrictNode, entries: FileEntry[]): FileEntry[] {
+  return [...entries].sort(
+    (a, b) =>
+      Number(a.node === node) - Number(b.node === node) || a.file.path.localeCompare(b.file.path),
+  )
 }
 
-function dirnameOf(path: string): string {
-  const slash = path.lastIndexOf('/')
-  return slash > 0 ? path.slice(0, slash) : '.'
-}
+/**
+ * One relationship as a raised curve: a quadratic arc over the rooftops, sampled
+ * into line segments so a whole group of relationships is a single draw call.
+ */
+function arcInto(from: THREE.Vector3, to: THREE.Vector3, out: number[]): void {
+  const span = Math.hypot(to.x - from.x, to.z - from.z)
+  const controlX = (from.x + to.x) / 2
+  const controlY = Math.max(from.y, to.y) + 0.5 + Math.min(6, span * 0.16)
+  const controlZ = (from.z + to.z) / 2
+  const steps = Math.max(10, Math.min(30, Math.round(6 + span * 1.6)))
 
-function extensionOf(path: string): string {
-  const name = basename(path).toLowerCase()
-  const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(dot + 1) : name
+  let previousX = from.x
+  let previousY = from.y
+  let previousZ = from.z
+  for (let index = 1; index <= steps; index += 1) {
+    const t = index / steps
+    const u = 1 - t
+    const x = u * u * from.x + 2 * u * t * controlX + t * t * to.x
+    const y = u * u * from.y + 2 * u * t * controlY + t * t * to.y
+    const z = u * u * from.z + 2 * u * t * controlZ + t * t * to.z
+    out.push(previousX, previousY, previousZ, x, y, z)
+    previousX = x
+    previousY = y
+    previousZ = z
+  }
 }
 
 /** Files of the same district, nearest in the tree first. */
