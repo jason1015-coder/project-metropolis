@@ -144,8 +144,8 @@ export function CitySection() {
             One continuous city: every repository is a district, its biggest files become its buildings, and the streets run between them.
             Height is lines of code, footprint is file size, and a scheduled GitHub Action surveys every repository on the
             account to write {LAYOUT_FILE}. Districts are mapped by glowing floating boundaries, not by plinths. Drag to
-            walk around, hold ⌘ or Ctrl and scroll to lean in, and hover a building to follow its links — the same file
-            name, the same type, the same district.
+            walk the streets (WASD, Shift to hurry), hold ⌘ or Ctrl and scroll to lean in, and hover a building to follow
+            its links — the same file name, the same type, the same district.
           </p>
           <dl className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4 lg:gap-x-10">
             {[
@@ -180,7 +180,7 @@ export function CitySection() {
             continuous city / {status === 'error' ? 'no layout' : status === 'loading' ? 'loading' : 'ready'}
           </p>
           <p className="mono hidden text-[10px] uppercase tracking-[0.14em] text-faint sm:block">
-            drag · ⌘/ctrl scroll · hover a tower
+            WASD move · drag · ⌘/ctrl scroll
           </p>
         </div>
 

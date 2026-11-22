@@ -11,7 +11,7 @@ Every repository is a district in one continuous city and every text file in it 
 - **File links on hover**: a hovered building names its neighbours — same file name elsewhere, other files of the same type, and the rest of its own district — each one a link to the file on GitHub
 - **Surveyed in CI**: repositories are surveyed by a GitHub Action, not by each visitor's browser
 - **Performance optimized**: instanced rendering for buildings and roads
-- **Interactive**: drag to rotate, ⌘/Ctrl + scroll to zoom, hover to inspect
+- **Interactive**: WASD to walk the city (Shift to hurry), drag to rotate, ⌘/Ctrl + scroll to zoom, double-click to recentre, hover to inspect
 
 ## How the city is built
 

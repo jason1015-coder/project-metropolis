@@ -153,6 +153,7 @@ export class CityScene {
   private dragDistance = 0
   private lastPointer = { x: 0, y: 0 }
   private lastInput = 0
+  private readonly pressed = new Set<string>()
   private yaw = 0.62
   private pitch = 0.42
   private distance = 30
@@ -678,6 +679,9 @@ export class CityScene {
     el.addEventListener('pointerleave', this.onPointerLeave)
     el.addEventListener('wheel', this.onWheel, { passive: false })
     el.addEventListener('dblclick', this.resetCamera)
+    window.addEventListener('keydown', this.onKeyDown)
+    window.addEventListener('keyup', this.onKeyUp)
+    window.addEventListener('blur', this.onBlur)
   }
 
   private detach(): void {
@@ -688,6 +692,61 @@ export class CityScene {
     el.removeEventListener('pointerleave', this.onPointerLeave)
     el.removeEventListener('wheel', this.onWheel)
     el.removeEventListener('dblclick', this.resetCamera)
+    window.removeEventListener('keydown', this.onKeyDown)
+    window.removeEventListener('keyup', this.onKeyUp)
+    window.removeEventListener('blur', this.onBlur)
+    this.pressed.clear()
+  }
+
+  /** WASD walks the city: W/S along the view, A/D across it, Shift doubles the pace. */
+  private onKeyDown = (event: KeyboardEvent) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return
+    const target = event.target as HTMLElement | null
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+    if (!this.inView()) return
+
+    const key = event.key.toLowerCase()
+    if (key !== 'w' && key !== 'a' && key !== 's' && key !== 'd' && key !== 'shift') return
+    this.pressed.add(key)
+    this.lastInput = performance.now()
+    if (key !== 'shift') event.preventDefault()
+  }
+
+  private onKeyUp = (event: KeyboardEvent) => {
+    this.pressed.delete(event.key.toLowerCase())
+  }
+
+  private onBlur = () => {
+    this.pressed.clear()
+  }
+
+  /** True while the city is on screen, so typing elsewhere never moves the camera. */
+  private inView(): boolean {
+    const box = this.container.getBoundingClientRect()
+    const viewport = window.innerHeight || 0
+    return box.bottom > 0 && box.top < viewport
+  }
+
+  private moveCamera(delta: number): void {
+    const forward = Number(this.pressed.has('w')) - Number(this.pressed.has('s'))
+    const strafe = Number(this.pressed.has('d')) - Number(this.pressed.has('a'))
+    if (forward === 0 && strafe === 0) return
+
+    const pace = this.distance * 0.45 * (this.pressed.has('shift') ? 2.2 : 1) * delta
+    const sin = Math.sin(this.yaw)
+    const cos = Math.cos(this.yaw)
+
+    // The camera sits along (sin, cos) from the target, so forward is the
+    // opposite way and right is the perpendicular of that.
+    this.target.x += (-sin * forward + cos * strafe) * pace
+    this.target.z += (-cos * forward - sin * strafe) * pace
+
+    const limitX = CITY_BOUNDS.w / 2 + 4
+    const limitZ = CITY_BOUNDS.d / 2 + 4
+    this.target.x = THREE.MathUtils.clamp(this.target.x, -limitX, limitX)
+    this.target.z = THREE.MathUtils.clamp(this.target.z, -limitZ, limitZ)
+
+    this.lastInput = performance.now()
   }
 
   private onPointerDown = (event: PointerEvent) => {
@@ -764,7 +823,9 @@ export class CityScene {
   private resetCamera = () => {
     this.yaw = 0.62
     this.pitch = 0.42
-    this.distance = 34
+    this.distance = 30
+    this.target.set(0, 1.9, 0)
+    this.pressed.clear()
   }
 
   private clearHover(): void {
@@ -950,6 +1011,7 @@ export class CityScene {
     if (!this.dragging && !this.hovered && !this.reducedMotion && now - this.lastInput > 3500) {
       this.yaw += delta * 0.032
     }
+    this.moveCamera(delta)
     this.updateCamera()
 
     if (this.rise < 1) {
