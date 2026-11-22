@@ -274,9 +274,7 @@ export function CitySection() {
                         <p className="mono flex items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-muted">
                           <span className="round size-1.5 shrink-0 rounded-full" style={{ background: group.color }} />
                           {group.label}
-                          <span className="text-faint">
-                            {group.shown < group.total ? `${group.shown}/${group.total}` : group.total}
-                          </span>
+                          <span className="text-faint">{group.total}</span>
                         </p>
                         <ul className="mt-1 space-y-0.5">
                           {group.links.map((link) => (

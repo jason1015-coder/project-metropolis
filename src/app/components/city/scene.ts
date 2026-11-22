@@ -52,9 +52,6 @@ const RELATIONS: Record<RelationKind, { label: string; color: string }> = {
   district: { label: 'same district', color: '#b79bff' },
 }
 
-/** How many lines one relationship draws: enough to read, not enough to fog the city. */
-const LINK_LIMIT = 64
-
 export interface FileLink {
   label: string
   meta: string
@@ -69,9 +66,8 @@ export interface LinkGroup {
   label: string
   /** The colour this relationship's lines are drawn in. */
   color: string
-  /** Files with this relationship, and how many of them the map draws. */
+  /** Files with this relationship: one line is drawn for every one of them. */
   total: number
-  shown: number
   links: FileLink[]
 }
 
@@ -81,7 +77,6 @@ interface RelationGroup {
   label: string
   color: string
   total: number
-  shown: number
   entries: FileEntry[]
 }
 
@@ -1003,7 +998,9 @@ export class CityScene {
       const unique: FileEntry[] = []
       for (const entry of entries) {
         const key = linkKey(entry.node, entry.file)
-        if (seen.has(key)) continue
+        // Only files the city actually built can carry a line, so the card counts
+        // exactly the relationships the map draws.
+        if (seen.has(key) || !this.buildings.has(key)) continue
         seen.add(key)
         unique.push(entry)
       }
@@ -1014,8 +1011,7 @@ export class CityScene {
         label: style.label,
         color: style.color,
         total: unique.length,
-        shown: Math.min(unique.length, LINK_LIMIT),
-        entries: unique.slice(0, LINK_LIMIT),
+        entries: unique,
       })
     }
 
@@ -1043,7 +1039,6 @@ export class CityScene {
       label: group.label,
       color: group.color,
       total: group.total,
-      shown: group.shown,
       links: group.entries.slice(0, 3).map((entry) => ({
         label: entry.file.path,
         meta: entry.node === node ? dirnameOf(entry.file.path) || '.' : entry.node.repo.name,
@@ -1054,7 +1049,9 @@ export class CityScene {
 
   /**
    * Draw one arc from the hovered rooftop to every building it relates to, one
-   * colour per kind of relationship. The whole map fades in with the highlight.
+   * colour per kind of relationship. Every relationship gets a line: distance is
+   * spent on brightness, not on dropping links, so the far reach fades into the
+   * fog while the near neighbours stay bright.
    */
   private drawLinks(node: DistrictNode, file: CityFile, groups: RelationGroup[]): void {
     const source = this.buildings.get(linkKey(node, file))
@@ -1070,11 +1067,11 @@ export class CityScene {
       BUILDING_BASE + source.building.h * rise + 0.04,
       source.building.z,
     )
+    const colour = new THREE.Color()
+    const shade = new THREE.Color()
 
     for (const group of groups) {
-      const arcs: number[] = []
-      const markers: number[] = []
-
+      const targets: { to: THREE.Vector3; distance: number; variation: number }[] = []
       for (const entry of group.entries) {
         const target = this.buildings.get(linkKey(entry.node, entry.file))
         if (!target) continue
@@ -1083,17 +1080,51 @@ export class CityScene {
           BUILDING_BASE + target.building.h * rise + 0.04,
           target.building.z,
         )
-        arcInto(from, to, arcs)
-        markers.push(to.x, to.y, to.z)
+        targets.push({
+          to,
+          distance: Math.hypot(to.x - from.x, to.z - from.z),
+          variation: (hashString(linkKey(entry.node, entry.file)) % 1024) / 1024,
+        })
       }
-      if (arcs.length === 0) continue
+      if (targets.length === 0) continue
+
+      let near = Number.POSITIVE_INFINITY
+      let far = 0
+      for (const target of targets) {
+        near = Math.min(near, target.distance)
+        far = Math.max(far, target.distance)
+      }
+      const spread = Math.max(0.001, far - near)
+      // A busy arm is drawn a little dimmer overall, so five colours sweeping the
+      // city at once stay distinguishable instead of stacking into white.
+      const density = Math.max(
+        0.45,
+        1 / (1 + Math.log2(Math.max(1, targets.length / 24)) * 0.45),
+      )
+      colour.set(group.color)
+
+      const arcs: number[] = []
+      const arcColours: number[] = []
+      const markers: number[] = []
+      const markerColours: number[] = []
+
+      for (const target of targets) {
+        const brightness = density * (1 - 0.8 * ((target.distance - near) / spread))
+        shade.copy(colour).multiplyScalar(brightness)
+        arcInto(from, target.to, arcs, target.variation)
+        const vertices = arcs.length / 3 - arcColours.length / 3
+        for (let index = 0; index < vertices; index += 1) arcColours.push(shade.r, shade.g, shade.b)
+        markers.push(target.to.x, target.to.y, target.to.z)
+        markerColours.push(shade.r, shade.g, shade.b)
+      }
 
       const lineGeometry = new THREE.BufferGeometry()
       lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(arcs, 3))
+      lineGeometry.setAttribute('color', new THREE.Float32BufferAttribute(arcColours, 3))
       const lines = new THREE.LineSegments(
         lineGeometry,
         new THREE.LineBasicMaterial({
-          color: group.color,
+          vertexColors: true,
           transparent: true,
           opacity: 0,
           blending: THREE.AdditiveBlending,
@@ -1107,11 +1138,12 @@ export class CityScene {
 
       const markerGeometry = new THREE.BufferGeometry()
       markerGeometry.setAttribute('position', new THREE.Float32BufferAttribute(markers, 3))
+      markerGeometry.setAttribute('color', new THREE.Float32BufferAttribute(markerColours, 3))
       const points = new THREE.Points(
         markerGeometry,
         new THREE.PointsMaterial({
-          color: group.color,
-          size: 0.24,
+          vertexColors: true,
+          size: 0.2,
           transparent: true,
           opacity: 0,
           blending: THREE.AdditiveBlending,
@@ -1329,16 +1361,28 @@ function elsewhereFirst(node: DistrictNode, entries: FileEntry[]): FileEntry[] {
   )
 }
 
+/** Small stable hash, used to give every link its own arc height. */
+function hashString(value: string): number {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return hash >>> 0
+}
+
 /**
  * One relationship as a raised curve: a quadratic arc over the rooftops, sampled
  * into line segments so a whole group of relationships is a single draw call.
+ * Each link's own variation gives it a slightly different height, so a fan of
+ * hundreds reads as separate strands rather than one thick beam.
  */
-function arcInto(from: THREE.Vector3, to: THREE.Vector3, out: number[]): void {
+function arcInto(from: THREE.Vector3, to: THREE.Vector3, out: number[], variation: number): void {
   const span = Math.hypot(to.x - from.x, to.z - from.z)
   const controlX = (from.x + to.x) / 2
-  const controlY = Math.max(from.y, to.y) + 0.5 + Math.min(6, span * 0.16)
+  const controlY = Math.max(from.y, to.y) + (0.5 + Math.min(6, span * 0.16)) * (0.85 + variation * 0.6)
   const controlZ = (from.z + to.z) / 2
-  const steps = Math.max(10, Math.min(30, Math.round(6 + span * 1.6)))
+  const steps = Math.max(8, Math.min(26, Math.round(6 + span * 1.4)))
 
   let previousX = from.x
   let previousY = from.y
