@@ -7,6 +7,7 @@ import * as THREE from 'three'
 
 import {
   CITY_BOUNDS,
+  cityBounds,
   layoutBuildings,
   layoutCity,
   layoutLanes,
@@ -32,7 +33,8 @@ const GROUND_Y = 0
 const BUILDING_BASE = 0.008
 /** Where a district boundary floats before its buildings are known. */
 const BOUNDARY_Y = 0.9
-const PET_POSITION = new THREE.Vector3(-8, GROUND_Y, CITY_BOUNDS.d / 2 + 2.4)
+/** Fog density for the base footprint; thinner as the city grows outward. */
+const BASE_FOG_DENSITY = 0.014
 
 const ZOOM_MIN = 16
 const ZOOM_MAX = 68
@@ -155,7 +157,15 @@ export class CityScene {
   private readonly scene = new THREE.Scene()
   private readonly camera: THREE.PerspectiveCamera
   private readonly mapCamera: THREE.OrthographicCamera
-  private readonly fog = new THREE.FogExp2(0x0a0c0b, 0.014)
+  private readonly fog = new THREE.FogExp2(0x0a0c0b, BASE_FOG_DENSITY)
+  /** The current footprint: it grows with the district count on every layout. */
+  private bounds: Rect = { ...CITY_BOUNDS }
+  private keyLight!: THREE.DirectionalLight
+  private groundMesh!: THREE.Mesh
+  private pavingMesh!: THREE.Mesh
+  private glowMesh!: THREE.Mesh
+  private petShadow!: THREE.Mesh
+  private maxDistance = ZOOM_MAX
   private readonly mapTarget = new THREE.Vector2(0, 0)
   private mapMode = false
   private mapZoom = 1
@@ -246,8 +256,8 @@ export class CityScene {
 
     this.pet = createTamagotchi()
     this.pet.group.scale.setScalar(1.6)
-    this.pet.group.position.copy(PET_POSITION)
     this.scene.add(this.pet.group)
+    this.fitCityExtent()
 
     // The line map floats over the city, so a hovered building's relationships
     // stay legible even when the arcs pass behind taller towers.
@@ -269,7 +279,17 @@ export class CityScene {
   setLayout(layout: CityLayout): void {
     this.clearCity()
 
-    const { plots, roadNetwork } = layoutCity(layout.repos)
+    // One plot per project: the footprint is derived from the district count,
+    // so the city extends outward whenever a project is added rather than
+    // packing its blocks tighter into a fixed tray.
+    this.bounds = cityBounds(layout.repos.length)
+    this.fitCityExtent()
+    this.maxDistance = Math.max(ZOOM_MAX, this.fitDistance() * 1.6)
+    this.distance = this.fitDistance()
+    this.target.set(0, 1.9, 0)
+    this.fog.density = BASE_FOG_DENSITY * Math.min(1, Math.sqrt(13 / Math.max(1, layout.repos.length)))
+
+    const { plots, roadNetwork } = layoutCity(layout.repos, this.bounds)
     for (const plot of plots) this.addNode(plot)
     this.buildRoads(roadNetwork)
 
@@ -347,29 +367,34 @@ export class CityScene {
   }
 
   private buildGround(): void {
+    // The pavements are unit planes scaled to the current footprint, so they
+    // can follow the city as it grows instead of being cut to a fixed size.
+
     // The city stands straight on the page background: one ground plane, no tray.
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(240, 240),
+      new THREE.PlaneGeometry(1, 1),
       new THREE.MeshStandardMaterial({ color: '#171c21', roughness: 0.96, metalness: 0 }),
     )
     ground.rotation.x = -Math.PI / 2
     ground.position.y = GROUND_Y
     ground.receiveShadow = true
     this.scene.add(ground)
+    this.groundMesh = ground
 
     // One shared pavement under every district: the city is a single surface,
     // not a tray of separate blocks.
     const paving = new THREE.Mesh(
-      new THREE.PlaneGeometry(CITY_BOUNDS.w + ROAD_WIDTH, CITY_BOUNDS.d + ROAD_WIDTH),
+      new THREE.PlaneGeometry(1, 1),
       new THREE.MeshStandardMaterial({ color: '#2b333c', roughness: 0.94, metalness: 0.03 }),
     )
     paving.rotation.x = -Math.PI / 2
     paving.position.set(CITY_BOUNDS.x, GROUND_Y + 0.006, CITY_BOUNDS.z)
     paving.receiveShadow = true
     this.scene.add(paving)
+    this.pavingMesh = paving
 
     const glow = new THREE.Mesh(
-      new THREE.PlaneGeometry(CITY_BOUNDS.w * 1.9, CITY_BOUNDS.d * 2.1),
+      new THREE.PlaneGeometry(1, 1),
       new THREE.MeshBasicMaterial({
         map: makeGlowTexture(),
         color: '#9fb6d6',
@@ -382,6 +407,7 @@ export class CityScene {
     glow.rotation.x = -Math.PI / 2
     glow.position.set(0, GROUND_Y + 0.004, 0)
     this.scene.add(glow)
+    this.glowMesh = glow
 
     const petShadow = new THREE.Mesh(
       new THREE.PlaneGeometry(4.2, 3.2),
@@ -393,8 +419,48 @@ export class CityScene {
       }),
     )
     petShadow.rotation.x = -Math.PI / 2
-    petShadow.position.set(PET_POSITION.x, GROUND_Y + 0.008, PET_POSITION.z)
+    petShadow.position.set(0, GROUND_Y + 0.008, 0)
     this.scene.add(petShadow)
+    this.petShadow = petShadow
+  }
+
+  /**
+   * Size everything that is not a building to the current footprint: the
+   * pavement, the shadow reach, the fog and the pet at the city's edge. Called
+   * on construction and again whenever a bigger city arrives.
+   */
+  private fitCityExtent(): void {
+    const { x, z, w, d } = this.bounds
+
+    const groundSpan = Math.max(240, Math.max(w, d) * 3)
+    this.groundMesh.scale.set(groundSpan, groundSpan, 1)
+
+    this.pavingMesh.scale.set(w + ROAD_WIDTH, d + ROAD_WIDTH, 1)
+    this.pavingMesh.position.set(x, GROUND_Y + 0.006, z)
+
+    this.glowMesh.scale.set(w * 1.9, d * 2.1, 1)
+    this.glowMesh.position.set(x, GROUND_Y + 0.004, z)
+
+    // The pet waits just off the south edge, near the front-left corner.
+    this.pet.group.position.set(x - w / 2 + 9, GROUND_Y, z + d / 2 + 2.4)
+    this.petShadow.position.set(this.pet.group.position.x, GROUND_Y + 0.008, this.pet.group.position.z)
+
+    // The key light's shadow camera has to cover the whole city, or the outer
+    // districts lose their shadows as it grows.
+    const reach = Math.max(27, Math.max(w, d) * 0.8 + 6)
+    const shadowCamera = this.keyLight.shadow.camera
+    shadowCamera.left = -reach
+    shadowCamera.right = reach
+    shadowCamera.top = reach
+    shadowCamera.bottom = -reach
+    shadowCamera.far = 90 + reach
+    shadowCamera.updateProjectionMatrix()
+    this.renderer.shadowMap.needsUpdate = true
+  }
+
+  /** The camera distance that frames the whole metropolis. */
+  private fitDistance(): number {
+    return Math.max(30, Math.hypot(this.bounds.w, this.bounds.d) * 0.73)
   }
 
   private buildLights(): void {
@@ -403,6 +469,7 @@ export class CityScene {
     this.scene.add(new THREE.HemisphereLight(0xeaf2ff, 0x39414a, 1.3))
 
     const key = new THREE.DirectionalLight(0xffffff, 2.3)
+    this.keyLight = key
     key.position.set(18, 32, 14)
     key.castShadow = true
     key.shadow.mapSize.set(2048, 2048)
@@ -841,8 +908,8 @@ export class CityScene {
 
     if (this.mapMode) {
       const pace = this.mapHalfW * 0.9 * (this.pressed.has('shift') ? 2 : 1) * delta
-      this.mapTarget.x = THREE.MathUtils.clamp(this.mapTarget.x + strafe * pace, -CITY_BOUNDS.w / 2 - 4, CITY_BOUNDS.w / 2 + 4)
-      this.mapTarget.y = THREE.MathUtils.clamp(this.mapTarget.y - forward * pace, -CITY_BOUNDS.d / 2 - 4, CITY_BOUNDS.d / 2 + 4)
+      this.mapTarget.x = THREE.MathUtils.clamp(this.mapTarget.x + strafe * pace, -this.bounds.w / 2 - 4, this.bounds.w / 2 + 4)
+      this.mapTarget.y = THREE.MathUtils.clamp(this.mapTarget.y - forward * pace, -this.bounds.d / 2 - 4, this.bounds.d / 2 + 4)
       this.lastInput = performance.now()
       return
     }
@@ -856,8 +923,8 @@ export class CityScene {
     this.target.x += (-sin * forward + cos * strafe) * pace
     this.target.z += (-cos * forward - sin * strafe) * pace
 
-    const limitX = CITY_BOUNDS.w / 2 + 4
-    const limitZ = CITY_BOUNDS.d / 2 + 4
+    const limitX = this.bounds.w / 2 + 4
+    const limitZ = this.bounds.d / 2 + 4
     this.target.x = THREE.MathUtils.clamp(this.target.x, -limitX, limitX)
     this.target.z = THREE.MathUtils.clamp(this.target.z, -limitZ, limitZ)
 
@@ -888,8 +955,8 @@ export class CityScene {
       this.dragDistance += Math.abs(dx) + Math.abs(dy)
       if (this.mapMode) {
         const scale = (this.mapHalfW * 2) / Math.max(1, rect.width)
-        this.mapTarget.x = THREE.MathUtils.clamp(this.mapTarget.x - dx * scale, -CITY_BOUNDS.w / 2 - 4, CITY_BOUNDS.w / 2 + 4)
-        this.mapTarget.y = THREE.MathUtils.clamp(this.mapTarget.y - dy * scale, -CITY_BOUNDS.d / 2 - 4, CITY_BOUNDS.d / 2 + 4)
+        this.mapTarget.x = THREE.MathUtils.clamp(this.mapTarget.x - dx * scale, -this.bounds.w / 2 - 4, this.bounds.w / 2 + 4)
+        this.mapTarget.y = THREE.MathUtils.clamp(this.mapTarget.y - dy * scale, -this.bounds.d / 2 - 4, this.bounds.d / 2 + 4)
         return
       }
       this.yaw -= dx * 0.005
@@ -939,7 +1006,7 @@ export class CityScene {
     // gesture is already pinned at a zoom limit, so it cannot leak into the page
     // halfway through.
     const pinned =
-      (event.deltaY > 0 && this.distance >= ZOOM_MAX - 0.01) ||
+      (event.deltaY > 0 && this.distance >= this.maxDistance - 0.01) ||
       (event.deltaY < 0 && this.distance <= ZOOM_MIN + 0.01)
     if (!event.ctrlKey && !event.metaKey && !pinned) return
 
@@ -947,7 +1014,7 @@ export class CityScene {
     this.distance = THREE.MathUtils.clamp(
       this.distance * Math.exp(event.deltaY * 0.0011),
       ZOOM_MIN,
-      ZOOM_MAX,
+      this.maxDistance,
     )
     this.lastInput = performance.now()
   }
@@ -961,7 +1028,7 @@ export class CityScene {
     }
     this.yaw = 0.62
     this.pitch = 0.42
-    this.distance = 30
+    this.distance = this.fitDistance()
     this.target.set(0, 1.9, 0)
     this.pressed.clear()
   }
@@ -1290,8 +1357,8 @@ export class CityScene {
     this.camera.updateProjectionMatrix()
 
     // Fit the whole footprint, then apply the map zoom.
-    const halfDepth = CITY_BOUNDS.d / 2 + 3
-    const halfWidth = CITY_BOUNDS.w / 2 + 3
+    const halfDepth = this.bounds.d / 2 + 3
+    const halfWidth = this.bounds.w / 2 + 3
     const halfHeight = Math.max(halfDepth, halfWidth / Math.max(0.2, aspect)) / this.mapZoom
     this.mapHalfW = halfHeight * aspect
     this.mapCamera.left = -this.mapHalfW
@@ -1309,7 +1376,7 @@ export class CityScene {
     }
 
     const fit = this.camera.aspect < 1.5 ? 1.5 / Math.max(0.6, this.camera.aspect) : 1
-    const distance = THREE.MathUtils.clamp(this.distance * fit, 16, 84)
+    const distance = THREE.MathUtils.clamp(this.distance * fit, 16, this.maxDistance * 1.24)
     const horizontal = Math.cos(this.pitch) * distance
     this.camera.position.set(
       this.target.x + horizontal * Math.sin(this.yaw),

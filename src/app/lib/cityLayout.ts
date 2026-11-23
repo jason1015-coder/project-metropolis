@@ -44,8 +44,30 @@ export interface Building {
   detail: BuildingDetail | null
 }
 
-/** The city footprint, in world units, centred on the origin. */
+/**
+ * The footprint the city has at its base district count, in world units,
+ * centred on the origin. It is a reference size, not a cap: `cityBounds` grows
+ * the footprint as districts are added.
+ */
 export const CITY_BOUNDS: Rect = { x: 0, z: 0, w: 34, d: 23 }
+
+/** The district count the base footprint was laid out for. */
+const BASE_DISTRICTS = 13
+/** The city keeps the proportions of its base blocks as it grows. */
+const CITY_ASPECT = CITY_BOUNDS.w / CITY_BOUNDS.d
+/** Ground given to each district, so a block keeps its size as the city grows. */
+const AREA_PER_DISTRICT = (CITY_BOUNDS.w * CITY_BOUNDS.d) / BASE_DISTRICTS
+
+/**
+ * The city has no fixed size. Every district is given the same plot, so each
+ * project added to the layout extends the metropolis outward instead of packing
+ * the existing blocks tighter.
+ */
+export function cityBounds(districtCount: number): Rect {
+  const count = Math.max(1, districtCount)
+  const w = Math.sqrt(count * AREA_PER_DISTRICT * CITY_ASPECT)
+  return { x: 0, z: 0, w, d: w / CITY_ASPECT }
+}
 
 /** The width of the streets that run between the blocks. */
 export const ROAD_WIDTH = 0.9
@@ -91,11 +113,12 @@ export interface RoadNetwork {
 /**
  * Lay the repositories out as blocks of one continuous city. The blocks share a
  * single street grid, so neighbouring districts are separated by a road rather
- * than by a gap of empty ground.
+ * than by a gap of empty ground. The grid grows with the districts, so a new
+ * project extends the city instead of crowding the blocks already there.
  */
 export function layoutCity(
   repos: RepoSummary[],
-  bounds: Rect = CITY_BOUNDS,
+  bounds: Rect = cityBounds(repos.length),
 ): { plots: Plot[]; roadNetwork: RoadNetwork } {
   if (repos.length === 0) return { plots: [], roadNetwork: { nodes: [], segments: [] } }
 
