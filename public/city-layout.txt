@@ -10,7 +10,7 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-22T18:39:42Z
+updated 2026-11-23T04:39:47Z
 districts 13
 buildings 2579
 
@@ -444,9 +444,9 @@ district nanocoder
   language TypeScript
   stars 0
   forks 0
-  size 44141
+  size 44235
   branch main
-  pushed 2026-11-22T10:00:41Z
+  pushed 2026-11-23T04:39:47Z
   fork true
   url https://github.com/jason1015-coder/nanocoder
   files 899
@@ -5125,13 +5125,13 @@ district project-metropolis
   language TypeScript
   stars 0
   forks 0
-  size 261
+  size 262
   branch main
-  pushed 2026-11-22T16:49:53Z
+  pushed 2026-11-22T19:53:28Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 26
-  lines 10854
+  lines 11186
   file 15 859 .github/FUNDING.yml
   file 62 1936 .github/workflows/city-layout.yml
   file 63 1285 .github/workflows/deploy.yml
@@ -5139,7 +5139,7 @@ district project-metropolis
   file 7 60 .gitignore
   file 19 759 index.html
   file 1 647 package.json
-  file 6547 245737 public/city-layout.txt
+  file 6879 259245 public/city-layout.txt
   file 12 484 public/favicon.svg
   file 57 3030 README.md
   file 372 13514 scripts/survey-city.mjs
