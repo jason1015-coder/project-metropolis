@@ -10,9 +10,9 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-23T04:39:47Z
-districts 13
-buildings 2579
+updated 2026-11-23T19:01:28Z
+districts 12
+buildings 2551
 
 district audio-pitch-converter
   description a simple chrome extension to convert all pitches to others
@@ -400,11 +400,11 @@ district docs
 district jason1015-coder
   description 
   language JavaScript
-  stars 0
+  stars 1
   forks 0
   size 118
   branch main
-  pushed 2026-11-22T14:28:47Z
+  pushed 2026-11-23T18:53:31Z
   fork false
   url https://github.com/jason1015-coder/jason1015-coder
   files 6
@@ -414,7 +414,7 @@ district jason1015-coder
   file 50 1468 .github/workflows/tamagotchi.yml
   file 77 3093 README.md
   file 210 10695 scripts/tamagotchi.mjs
-  file 55 4536 tamagotchi.svg
+  file 55 4604 tamagotchi.svg
 
 district manager-ext
   description 
@@ -5107,31 +5107,18 @@ district nanocoder
     import ../types/core
     import ./templates/mcp-templates
 
-district pandora
-  description the editor that designs to be hated, no big companies , no trackers, 100% pure chaos
-  language null
-  stars 0
-  forks 0
-  size 0
-  branch main
-  pushed 2026-11-22T18:39:42Z
-  fork false
-  url https://github.com/jason1015-coder/pandora
-  files 0
-  lines 0
-
 district project-metropolis
   description my project/work displayed as a city
   language TypeScript
   stars 0
   forks 0
-  size 262
+  size 263
   branch main
-  pushed 2026-11-22T19:53:28Z
+  pushed 2026-11-23T18:59:19Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 26
-  lines 11186
+  lines 11276
   file 15 859 .github/FUNDING.yml
   file 62 1936 .github/workflows/city-layout.yml
   file 63 1285 .github/workflows/deploy.yml
@@ -5150,7 +5137,7 @@ district project-metropolis
     import ../../lib/cityData
     import ../motion
     import ./scene
-  file 1522 53439 src/app/components/city/scene.ts
+  file 1589 56142 src/app/components/city/scene.ts
     import ../../lib/cityLayout
     import ../../lib/cityData
     import ../../lib/fileLinks
@@ -5162,7 +5149,7 @@ district project-metropolis
     import ../lib/cx
   file 49 1919 src/app/components/Preloader.tsx
   file 309 9849 src/app/lib/cityData.ts
-  file 381 11905 src/app/lib/cityLayout.ts
+  file 404 12954 src/app/lib/cityLayout.ts
     import ./cityData
   file 3 124 src/app/lib/cx.ts
   file 181 5625 src/app/lib/fileLinks.ts
@@ -5200,7 +5187,7 @@ district quick-note-ext
 district scipturalite
   description lite version of scriptura - https://github.com/jason1015-coder/scriptura
   language C++
-  stars 0
+  stars 1
   forks 0
   size 66883
   branch main
@@ -5518,11 +5505,11 @@ district scriptura
   forks 2
   size 71810
   branch main
-  pushed 2026-10-28T17:06:52Z
+  pushed 2026-11-23T19:01:28Z
   fork false
   url https://github.com/jason1015-coder/scriptura
-  files 256
-  lines 45812
+  files 228
+  lines 37785
   file 32 708 .github/ISSUE_TEMPLATE/bug_report.md
   file 10 126 .github/ISSUE_TEMPLATE/custom.md
   file 20 595 .github/ISSUE_TEMPLATE/feature_request.md
@@ -5540,49 +5527,33 @@ district scriptura
   file 447 31205 include/scriptura/rust_backend.h
   file 55 2814 include/scriptura/scriptura_actions.h
   file 21 1065 LICENSE
-  file 255 10607 README.md
+  file 255 10612 README.md
   file 49 1837 run.sh
   file 43 928 scripts/build.bat
   file 33 1091 scripts/build.sh
   file 28 819 scripts/convert-icon.ps1
   file 20 503 scripts/run_tests.sh
   file 14 313 scripts/run.sh
-  file 1631 61782 src/codeeditor.cpp
-  file 254 8566 src/codeeditor.h
-  file 297 10116 src/customtitlebar.cpp
-  file 61 1793 src/customtitlebar.h
+  file 1618 61026 src/codeeditor.cpp
+  file 246 8181 src/codeeditor.h
   file 18 609 src/entitlements.plist
   file 365 18890 src/fileicons.cpp
   file 104 3802 src/fileicons.h
   file 26 851 src/Info.plist.in
   file 132 3688 src/internals/crashhandler.cpp
   file 13 182 src/internals/crashhandler.h
-  file 177 5854 src/internals/rundialog.cpp
-  file 54 1337 src/internals/rundialog.h
   file 495 16830 src/internals/settings_store.cpp
   file 117 5163 src/internals/settings_store.h
   file 632 27071 src/languageregistry.cpp
   file 87 3057 src/languageregistry.h
   file 891 25184 src/main.cpp
-  file 399 13756 src/mainwindow_actions.cpp
-  file 276 7799 src/mainwindow_debug.cpp
-  file 352 13209 src/mainwindow_events.cpp
-  file 465 18443 src/mainwindow_lsp.cpp
-  file 909 35562 src/mainwindow_tabs.cpp
-  file 985 47844 src/mainwindow_theme.cpp
-  file 1670 72500 src/mainwindow.cpp
-  file 448 17049 src/mainwindow.h
+  file 366 12706 src/mainwindow_actions.cpp
+  file 312 11751 src/mainwindow_events.cpp
+  file 906 35364 src/mainwindow_tabs.cpp
+  file 923 44854 src/mainwindow_theme.cpp
+  file 1091 46359 src/mainwindow.cpp
+  file 416 15690 src/mainwindow.h
   file 238 5293 src/mainwindow.ui
-  file 1682 49285 src/panels/terminal/terminalemulator.cpp
-  file 357 13453 src/panels/terminal/terminalemulator.h
-  file 609 19763 src/panels/terminal/terminalpanel.cpp
-  file 162 5056 src/panels/terminal/terminalpanel.h
-  file 663 21786 src/panels/terminal/terminalsession.cpp
-  file 132 4427 src/panels/terminal/terminalsession.h
-  file 804 27046 src/panels/terminal/terminalwidget.cpp
-  file 120 3711 src/panels/terminal/terminalwidget.h
-  file 180 5777 src/projectsearch.cpp
-  file 48 1278 src/projectsearch.h
   file 67 4185 src/resources.qrc
   file 3 229 src/resources/icons/app-icon.svg
   file 5 318 src/resources/icons/archive.svg
@@ -5737,8 +5708,6 @@ district scriptura
   file 74 1681 src/rust_backend/src/utils.rs
   file 95 2630 src/rust_backend/src/version_fetcher.rs
   file 230 6418 src/rust_backend/src/workspace.rs
-  file 157 4256 src/services/dap/debugconfiguration.cpp
-  file 44 1074 src/services/dap/debugconfiguration.h
   file 61 1393 src/themedefs.h
   file 299 11105 src/themeicons.cpp
   file 269 9973 src/themeicons.h
@@ -5747,18 +5716,14 @@ district scriptura
   file 3 62 src/version.h.in
   file 267 7559 src/widgets/bracketcolorizer.cpp
   file 69 1899 src/widgets/bracketcolorizer.h
-  file 125 4077 src/widgets/breadcrumbbar.cpp
-  file 47 1143 src/widgets/breadcrumbbar.h
+  file 105 3293 src/widgets/breadcrumbbar.cpp
+  file 46 1077 src/widgets/breadcrumbbar.h
   file 86 2312 src/widgets/codelensmanager.cpp
   file 69 2011 src/widgets/codelensmanager.h
-  file 162 5192 src/widgets/cssbreadcrumb.cpp
-  file 54 1424 src/widgets/cssbreadcrumb.h
   file 136 4957 src/widgets/encodingmanager.cpp
   file 61 1789 src/widgets/encodingmanager.h
   file 460 12295 src/widgets/foldmanager.cpp
   file 99 3118 src/widgets/foldmanager.h
-  file 102 2723 src/widgets/gitblame.cpp
-  file 73 1791 src/widgets/gitblame.h
   file 34 645 src/widgets/multi-cursor.cpp
   file 29 672 src/widgets/multi-cursor.h
   file 166 4609 src/widgets/notificationcenter.cpp
@@ -5774,8 +5739,6 @@ district scriptura
   file 376 10041 src/widgets/snippetmanager.cpp
   file 91 2622 src/widgets/snippetmanager.h
   file 58 1621 src/widgets/splashscreen.h
-  file 89 2262 src/widgets/splitmanager.cpp
-  file 36 895 src/widgets/splitmanager.h
   file 281 9710 src/widgets/statusbarwidget.cpp
   file 73 2013 src/widgets/statusbarwidget.h
   file 139 4082 src/widgets/taskrunnerui.cpp
@@ -5784,10 +5747,6 @@ district scriptura
   file 75 2122 src/widgets/universalsearch.h
   file 376 13056 src/widgets/welcomemenuscreen.cpp
   file 67 1733 src/widgets/welcomemenuscreen.h
-  file 174 4206 src/widgets/zenmode.cpp
-  file 78 1878 src/widgets/zenmode.h
-  file 151 4505 src/windowanimator.cpp
-  file 29 694 src/windowanimator.h
   file 62 2079 tests/CMakeLists.txt
   file 191 5283 tests/test_bracketcolorizer.cpp
   file 28 702 tests/test_bracketcolorizer.h
