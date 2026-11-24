@@ -10,8 +10,8 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-24T00:08:33Z
-districts 12
+updated 2026-11-24T11:16:08Z
+districts 13
 buildings 2567
 
 district audio-pitch-converter
@@ -5107,14 +5107,27 @@ district nanocoder
     import ../types/core
     import ./templates/mcp-templates
 
+district particle-game
+  description turn particle physics into a game
+  language null
+  stars 0
+  forks 0
+  size 0
+  branch main
+  pushed 2026-11-24T11:16:08Z
+  fork false
+  url https://github.com/jason1015-coder/particle-game
+  files 0
+  lines 0
+
 district project-metropolis
   description my project/work displayed as a city
   language TypeScript
   stars 0
   forks 0
-  size 272
+  size 273
   branch main
-  pushed 2026-11-24T00:08:33Z
+  pushed 2026-11-24T10:09:23Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 26
