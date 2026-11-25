@@ -10,9 +10,9 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-25T18:38:29Z
+updated 2026-11-25T19:55:30Z
 districts 13
-buildings 2570
+buildings 2554
 
 district audio-pitch-converter
   description a simple chrome extension to convert all pitches to others
@@ -402,17 +402,17 @@ district jason1015-coder
   language JavaScript
   stars 1
   forks 0
-  size 120
+  size 126
   branch main
-  pushed 2026-11-23T18:53:31Z
+  pushed 2026-11-25T19:29:07Z
   fork false
   url https://github.com/jason1015-coder/jason1015-coder
   files 6
-  lines 457
+  lines 460
   file 15 859 .github/FUNDING.yml
   file 50 1982 .github/tamagotchi-notifier.yml
   file 50 1468 .github/workflows/tamagotchi.yml
-  file 77 3093 README.md
+  file 80 3361 README.md
   file 210 10695 scripts/tamagotchi.mjs
   file 55 4604 tamagotchi.svg
 
@@ -5109,10 +5109,10 @@ district nanocoder
 
 district particle-game
   description turn particle physics into a game, come from a random idea formed in a random physics lesson
-  language CSS
+  language HTML
   stars 1
   forks 0
-  size 0
+  size 33
   branch main
   pushed 2026-11-25T18:38:29Z
   fork false
@@ -5130,11 +5130,11 @@ district project-metropolis
   forks 0
   size 275
   branch main
-  pushed 2026-11-25T08:55:24Z
+  pushed 2026-11-25T19:04:58Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 26
-  lines 11264
+  lines 11267
   file 15 859 .github/FUNDING.yml
   file 62 1936 .github/workflows/city-layout.yml
   file 63 1285 .github/workflows/deploy.yml
@@ -5142,7 +5142,7 @@ district project-metropolis
   file 7 60 .gitignore
   file 19 759 index.html
   file 1 647 package.json
-  file 6867 258724 public/city-layout.txt
+  file 6870 258881 public/city-layout.txt
   file 12 484 public/favicon.svg
   file 57 3030 README.md
   file 372 13514 scripts/survey-city.mjs
@@ -5205,20 +5205,20 @@ district scipturalite
   language C++
   stars 1
   forks 0
-  size 66937
+  size 66953
   branch main
-  pushed 2026-11-23T19:41:55Z
+  pushed 2026-11-25T19:55:30Z
   fork false
   url https://github.com/jason1015-coder/scipturalite
-  files 228
-  lines 37554
+  files 212
+  lines 35836
   file 32 708 .github/ISSUE_TEMPLATE/bug_report.md
   file 10 126 .github/ISSUE_TEMPLATE/custom.md
   file 20 595 .github/ISSUE_TEMPLATE/feature_request.md
-  file 311 10822 .github/workflows/build.yml
-  file 214 8330 .github/workflows/deploy.yml
-  file 98 3572 .github/workflows/dev-release.yml
-  file 154 5614 .github/workflows/test.yml
+  file 436 15426 .github/workflows/build.yml
+  file 305 11697 .github/workflows/deploy.yml
+  file 99 3623 .github/workflows/dev-release.yml
+  file 197 6325 .github/workflows/test.yml
   file 180 2061 .gitignore
   file 341 12436 CMakeLists.txt
   file 110 6003 CONTRIBUTING.md
@@ -5250,11 +5250,11 @@ district scipturalite
   file 87 3057 src/languageregistry.h
   file 891 25184 src/main.cpp
   file 366 12706 src/mainwindow_actions.cpp
-  file 312 11751 src/mainwindow_events.cpp
-  file 906 35364 src/mainwindow_tabs.cpp
+  file 289 10761 src/mainwindow_events.cpp
+  file 877 33977 src/mainwindow_tabs.cpp
   file 923 44854 src/mainwindow_theme.cpp
-  file 1091 46359 src/mainwindow.cpp
-  file 416 15690 src/mainwindow.h
+  file 1000 41258 src/mainwindow.cpp
+  file 356 12876 src/mainwindow.h
   file 238 5293 src/mainwindow.ui
   file 67 4185 src/resources.qrc
   file 3 229 src/resources/icons/app-icon.svg
@@ -5458,47 +5458,31 @@ district scipturalite
   file 24 612 tests/test_codelensmanager.h
   file 22 623 tests/test_crashhandler.cpp
   file 14 207 tests/test_crashhandler.h
-  file 29 894 tests/test_debugconfiguration.cpp
-  file 14 236 tests/test_debugconfiguration.h
   file 212 6165 tests/test_encodingmanager.cpp
   file 34 928 tests/test_encodingmanager.h
   file 282 13899 tests/test_fileicons.cpp
   file 40 1618 tests/test_fileicons.h
   file 278 8477 tests/test_foldmanager.cpp
   file 32 878 tests/test_foldmanager.h
-  file 122 3363 tests/test_gitblame.cpp
-  file 20 413 tests/test_gitblame.h
-  file 79 3313 tests/test_main.cpp
-  file 289 9679 tests/test_mainwindow_editing.cpp
-  file 25 924 tests/test_mainwindow_editing.h
-  file 391 13724 tests/test_mainwindow_panels.cpp
-  file 25 896 tests/test_mainwindow_panels.h
-  file 210 7237 tests/test_mainwindow_sidebar.cpp
+  file 65 2659 tests/test_main.cpp
+  file 238 7825 tests/test_mainwindow_editing.cpp
+  file 24 874 tests/test_mainwindow_editing.h
+  file 210 7182 tests/test_mainwindow_sidebar.cpp
   file 20 671 tests/test_mainwindow_sidebar.h
   file 110 2531 tests/test_multicursor.cpp
   file 22 467 tests/test_multicursor.h
-  file 27 632 tests/test_projectsearch.cpp
-  file 15 247 tests/test_projectsearch.h
-  file 38 1023 tests/test_rundialog.cpp
-  file 15 248 tests/test_rundialog.h
   file 165 4620 tests/test_sessionmanager.cpp
   file 22 499 tests/test_sessionmanager.h
   file 268 8071 tests/test_snippetmanager.cpp
   file 35 940 tests/test_snippetmanager.h
-  file 11 214 tests/test_splitmanager.cpp
-  file 13 187 tests/test_splitmanager.h
   file 271 7386 tests/test_taskrunnerui.cpp
   file 22 496 tests/test_taskrunnerui.h
-  file 884 33157 tests/test_terminal.cpp
-  file 72 1959 tests/test_terminal.h
   file 267 10408 tests/test_themeicons.cpp
   file 34 1127 tests/test_themeicons.h
   file 206 8086 tests/test_thememanager.cpp
   file 17 314 tests/test_thememanager.h
   file 101 3358 tests/test_ui_action_bridge.cpp
   file 19 445 tests/test_ui_action_bridge.h
-  file 19 458 tests/test_windowanimator.cpp
-  file 14 227 tests/test_windowanimator.h
   file 1 4 tests/Testing/Temporary/CTestCostData.txt
   file 1402 45213 translations/scriptura_en_001.ts
 
