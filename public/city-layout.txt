@@ -10,9 +10,9 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-25T06:04:21Z
+updated 2026-11-25T18:38:29Z
 districts 13
-buildings 2567
+buildings 2570
 
 district audio-pitch-converter
   description a simple chrome extension to convert all pitches to others
@@ -5108,26 +5108,29 @@ district nanocoder
     import ./templates/mcp-templates
 
 district particle-game
-  description turn particle physics into a game
-  language null
-  stars 0
+  description turn particle physics into a game, come from a random idea formed in a random physics lesson
+  language CSS
+  stars 1
   forks 0
   size 0
   branch main
-  pushed 2026-11-24T11:16:08Z
+  pushed 2026-11-25T18:38:29Z
   fork false
   url https://github.com/jason1015-coder/particle-game
-  files 0
-  lines 0
+  files 3
+  lines 1243
+  file 48 899 .github/workflows/pages.yml
+  file 1153 44409 index.html
+  file 42 2045 README.md
 
 district project-metropolis
   description my project/work displayed as a city
   language TypeScript
   stars 0
   forks 0
-  size 274
+  size 275
   branch main
-  pushed 2026-11-24T22:38:33Z
+  pushed 2026-11-25T08:55:24Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 26
