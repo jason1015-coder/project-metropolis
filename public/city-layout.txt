@@ -10,7 +10,7 @@
 #       import <specifier>          a relative import, drawn as a city line
 
 owner jason1015-coder
-updated 2026-11-26T21:46:15Z
+updated 2026-11-27T18:03:29Z
 districts 13
 buildings 2554
 
@@ -5128,9 +5128,9 @@ district project-metropolis
   language TypeScript
   stars 1
   forks 0
-  size 278
+  size 279
   branch main
-  pushed 2026-11-26T21:46:15Z
+  pushed 2026-11-27T08:51:28Z
   fork false
   url https://github.com/jason1015-coder/project-metropolis
   files 26
@@ -5205,43 +5205,43 @@ district scipturalite
   language C++
   stars 1
   forks 0
-  size 66966
+  size 67065
   branch main
-  pushed 2026-11-26T19:02:41Z
+  pushed 2026-11-27T18:03:29Z
   fork false
   url https://github.com/jason1015-coder/scipturalite
   files 212
-  lines 35899
+  lines 35622
   file 32 708 .github/ISSUE_TEMPLATE/bug_report.md
   file 10 126 .github/ISSUE_TEMPLATE/custom.md
   file 20 595 .github/ISSUE_TEMPLATE/feature_request.md
-  file 461 16679 .github/workflows/build.yml
-  file 338 13399 .github/workflows/deploy.yml
-  file 99 3623 .github/workflows/dev-release.yml
+  file 461 16989 .github/workflows/build.yml
+  file 338 13639 .github/workflows/deploy.yml
+  file 99 3643 .github/workflows/dev-release.yml
   file 202 6688 .github/workflows/test.yml
-  file 180 2061 .gitignore
-  file 341 12436 CMakeLists.txt
+  file 180 2076 .gitignore
+  file 341 12561 CMakeLists.txt
   file 110 6003 CONTRIBUTING.md
-  file 10 242 deployment/linux/scriptura.desktop
-  file 93 2353 deployment/windows/deploy-windows.bat
-  file 77 2024 deployment/windows/package-windows.bat
-  file 126 4453 deployment/windows/scriptura.nsi
+  file 10 258 deployment/linux/scriptura-lite.desktop
+  file 93 2368 deployment/windows/deploy-windows.bat
+  file 77 2059 deployment/windows/package-windows.bat
+  file 126 4498 deployment/windows/scriptura-lite.nsi
   file 447 31205 include/scriptura/rust_backend.h
   file 55 2814 include/scriptura/scriptura_actions.h
   file 21 1061 LICENSE
-  file 43 1171 README.md
-  file 49 1837 run.sh
-  file 43 928 scripts/build.bat
-  file 33 1091 scripts/build.sh
+  file 43 1176 README.md
+  file 49 1867 run.sh
+  file 43 933 scripts/build.bat
+  file 33 1096 scripts/build.sh
   file 28 819 scripts/convert-icon.ps1
   file 20 503 scripts/run_tests.sh
-  file 14 313 scripts/run.sh
+  file 14 323 scripts/run.sh
   file 1618 61026 src/codeeditor.cpp
   file 246 8181 src/codeeditor.h
   file 18 609 src/entitlements.plist
   file 365 18890 src/fileicons.cpp
   file 104 3802 src/fileicons.h
-  file 26 851 src/Info.plist.in
+  file 26 871 src/Info.plist.in
   file 132 3688 src/internals/crashhandler.cpp
   file 13 182 src/internals/crashhandler.h
   file 495 16830 src/internals/settings_store.cpp
@@ -5252,7 +5252,7 @@ district scipturalite
   file 366 12706 src/mainwindow_actions.cpp
   file 289 10761 src/mainwindow_events.cpp
   file 877 33977 src/mainwindow_tabs.cpp
-  file 923 44854 src/mainwindow_theme.cpp
+  file 646 29984 src/mainwindow_theme.cpp
   file 1000 41258 src/mainwindow.cpp
   file 356 12876 src/mainwindow.h
   file 238 5293 src/mainwindow.ui
